@@ -1,0 +1,12 @@
+---
+description: Drizzle schema and migration discipline for data model changes
+alwaysApply: true
+---
+
+# Drizzle Migration Discipline
+
+- When changing persisted data shape, update `db/schema.ts` and generate a migration with Drizzle.
+- Keep schema, model contracts, mapper functions, and repository logic aligned in the same change set.
+- Avoid schema-only or UI-only partial changes that break contract parity.
+- Prefer explicit migration files over ad-hoc runtime adjustments.
+- For relationship changes, verify delete/archive semantics and dependent record handling.

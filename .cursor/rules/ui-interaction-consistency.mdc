@@ -1,0 +1,25 @@
+---
+description: Consistent sheet, context-menu, and feedback interaction patterns
+alwaysApply: true
+---
+
+# UI Interaction Consistency
+
+- Follow established CRUD interaction pattern:
+  - Add/edit through sheet forms
+  - Row actions through context menu
+  - Clear user feedback through toasts
+- Keep action labels and behavior consistent across Clients, Projects, and Orders.
+- Keep sheet footer behavior consistent:
+  - submit
+  - clear
+  - cancel
+- Preserve left alignment, bottom anchoring, and non-stretched action buttons in sheet forms.
+- Reuse shared app-level components in `src/app/shared/components/` for repeated UI patterns.
+
+## Combobox stability pattern (important)
+
+- For searchable comboboxes, treat selected id (`selected...Id`) as source of truth.
+- Treat query/display text controls (`...Query`) as UI text only; do not make them the only required validity gate.
+- Do not re-resolve selected ids from query text during submit; submit should use selected id state.
+- `searchChange` should update visible text and clear lookup errors, but should not aggressively clear valid selected ids due to transient combobox event ordering.

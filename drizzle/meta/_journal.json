@@ -1,0 +1,48 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1777921241857,
+      "tag": "0000_luxuriant_corsair",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1777921667522,
+      "tag": "0001_majestic_multiple_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1777922195143,
+      "tag": "0002_redundant_beast",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1777995266193,
+      "tag": "0003_gigantic_the_renegades",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1777997767454,
+      "tag": "0004_serious_whiplash",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1778020629671,
+      "tag": "0005_wild_lilith",
+      "breakpoints": true
+    }
+  ]
+}

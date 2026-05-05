@@ -1,0 +1,42 @@
+---
+description: Enforce the project tech stack and UI conventions in all sessions
+alwaysApply: true
+---
+
+# Tech Stack and UI Conventions
+
+## Core stack
+
+- Framework: Angular (standalone components, TypeScript, reactive forms).
+- Styling: Tailwind utility classes as default.
+- UI primitives/components: Spartan (`@spartan-ng/helm` + local wrappers in `src/app/shared/ui/*`).
+- State pattern: feature stores using `@ngrx/signals`.
+- Persistence and schema: Drizzle ORM (`drizzle-orm` + `drizzle-kit`) with repository abstraction.
+
+## Data and state conventions
+
+- Use Signal Store (`signalStore`, `withState`, `withComputed`, `withMethods`) for feature state management.
+- Keep async CRUD and mutation orchestration in feature stores, not in templates.
+- Keep persistence access in repository classes; page and presentational components must not access storage directly.
+- Use Drizzle schema/migrations for data model evolution and keep model/mapper/repository contracts aligned.
+- Current form baseline is reactive forms. For future Angular upgrades, periodically re-evaluate Angular Signal Forms (experimental in Angular 21+) for fit, migration effort, and stability before adopting.
+
+## UI implementation defaults
+
+- Prefer Tailwind utilities in templates for layout/spacing/visual tweaks.
+- Do not introduce plain CSS for routine component styling when Tailwind utilities are sufficient.
+- Use Spartan UI components/wrappers before introducing custom HTML controls.
+  - Example: use Spartan combobox/sheet/context-menu/table/button/input wrappers over native custom-built alternatives.
+
+## Shared component boundary
+
+- `src/app/shared/ui/`:
+  - Reserved for Spartan wrappers/primitives and low-level UI directives.
+- `src/app/shared/components/`:
+  - Reusable app-level presentational components composed from those wrappers.
+
+## Refactor guardrails
+
+- Preserve existing UX and behavior while refactoring.
+- Keep page files as orchestration containers; extract presentational pieces into components.
+- Favor incremental, verifiable changes with build/tests after substantial edits.

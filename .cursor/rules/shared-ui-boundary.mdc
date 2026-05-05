@@ -1,0 +1,12 @@
+---
+description: Boundary between Spartan wrappers and app-level shared components
+alwaysApply: true
+---
+
+# Shared UI Boundary
+
+- `src/app/shared/ui/` is reserved for Spartan wrappers/primitives and low-level UI directives.
+- `src/app/shared/components/` is for reusable app-level components composed from Spartan primitives.
+- Do not place app-specific business semantics in `shared/ui`.
+- Do not duplicate wrapper components in `shared/components`; consume wrappers from `shared/ui` instead.
+- When adding new reusable UI patterns (headers, action footers, row menus), place them in `shared/components`.

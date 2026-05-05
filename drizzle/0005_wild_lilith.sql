@@ -1,0 +1,1 @@
+ALTER TABLE `clients` ADD `accent_color` text;

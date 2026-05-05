@@ -1,0 +1,17 @@
+---
+description: Testing expectations and validation gate for feature changes
+alwaysApply: true
+---
+
+# Testing and Validation Gate
+
+- For CRUD feature changes, maintain baseline coverage across:
+  - mapper behavior
+  - store behavior
+  - page/component interaction
+- Add or update specs when introducing new shared components or new UI interaction patterns.
+- After substantive edits, run:
+  - `bun ng build`
+  - `bun ng test --watch=false`
+- Do not consider work complete when introduced tests fail.
+- Keep tests focused on behavior and contracts, not implementation details.

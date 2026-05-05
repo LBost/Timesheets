@@ -1,0 +1,13 @@
+---
+description: Angular feature architecture and layering conventions for this repository
+alwaysApply: true
+---
+
+# Angular Feature Architecture
+
+- Keep feature code under `src/app/features/<entity>/` with `models`, `data`, `state`, and `ui` folders.
+- Treat page components as orchestration containers: store/repository calls, reactive form ownership, and toast decisions stay in page files.
+- Move presentational and reusable view pieces into components, not into repositories or stores.
+- Prefer incremental extraction: shared presentational primitives first, then feature-local components, then broader reuse.
+- Keep existing route entry points stable while refactoring internals.
+- Maintain existing behavior during refactors (delete/archive semantics, sheet actions, and combobox flows).

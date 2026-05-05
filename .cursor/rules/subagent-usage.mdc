@@ -1,0 +1,12 @@
+---
+description: Guidance for when to use subagents during larger refactors and exploration
+alwaysApply: true
+---
+
+# Subagent Usage
+
+- Use subagents for broad multi-area exploration or when independent investigations can run in parallel.
+- Do not use subagents for single-file targeted edits or narrow symbol lookups.
+- Prefer a single direct agent flow for small, local feature changes.
+- For large refactors, gather context first, then execute in incremental, verifiable steps.
+- Preserve current behavior and validate each increment with build/tests before moving on.
