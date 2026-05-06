@@ -9,25 +9,24 @@ import {
   signal,
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { HlmButtonImports } from '@spartan-ng/helm/button';
-import { HlmComboboxImports } from '@spartan-ng/helm/combobox';
-import { HlmInputImports } from '@spartan-ng/helm/input';
 import { HlmSeparatorImports } from '@spartan-ng/helm/separator';
 import { HlmSheetImports } from '@spartan-ng/helm/sheet';
 import { HlmSkeletonImports } from '@spartan-ng/helm/skeleton';
-import { HlmDialogImports } from '@spartan-ng/helm/dialog';
 import { ToastService } from '../../../core/feedback/toast.service';
 import { activeLookup } from '../../../shared/components/combobox-selection/combobox-selection.util';
 import { resolveClientAccentHex } from '../../../shared/components/client-accent/client-accent.util';
-import { CrudSheetFooterComponent } from '../../../shared/components/crud-sheet-footer/crud-sheet-footer.component';
 import { ClientsRepository } from '../../clients/data/clients.repository';
 import { OrdersRepository } from '../../orders/data/orders.repository';
 import { ProjectsRepository } from '../../projects/data/projects.repository';
 import { TimeEntryCreateInput, TimeEntryUpdateInput } from '../models/time-entry.model';
 import { TimeEntriesStore } from '../state/time-entries.store';
-import { NgIcon, provideIcons } from '@ng-icons/core';
+import { provideIcons } from '@ng-icons/core';
 import { lucideLayers, lucidePlus } from '@ng-icons/lucide';
-import { HlmIcon } from '@spartan-ng/helm/icon';
+import { TimeEntriesCalendarToolbarComponent } from './components/time-entries-calendar-toolbar.component';
+import { TimeEntriesMonthSummaryComponent } from './components/time-entries-month-summary.component';
+import { TimeEntriesCalendarGridComponent } from './components/time-entries-calendar-grid.component';
+import { TimeEntriesDayPickerDialogComponent } from './components/time-entries-day-picker-dialog.component';
+import { TimeEntrySheetFormComponent } from './components/time-entry-sheet-form.component';
 
 type ClientOption = { id: number; label: string };
 type ProjectOption = { id: number; clientId: number; label: string; useOrders: boolean };
@@ -43,51 +42,27 @@ type CalendarDay = {
   selector: 'app-time-entries-page',
   imports: [
     ReactiveFormsModule,
-    HlmButtonImports,
-    HlmComboboxImports,
-    HlmInputImports,
     HlmSeparatorImports,
     HlmSheetImports,
     HlmSkeletonImports,
-    HlmDialogImports,
-    NgIcon,
-    HlmIcon,
-    CrudSheetFooterComponent,
+    TimeEntriesCalendarToolbarComponent,
+    TimeEntriesMonthSummaryComponent,
+    TimeEntriesCalendarGridComponent,
+    TimeEntriesDayPickerDialogComponent,
+    TimeEntrySheetFormComponent,
   ],
   providers: [provideIcons({ lucidePlus, lucideLayers })],
   template: `
     <hlm-sheet>
       <section class="mx-auto flex w-full max-w-7xl flex-col gap-5">
-        <header class="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 class="text-2xl font-semibold">Time Entries</h1>
-            <p class="text-sm text-muted-foreground">
-              Plan monthly entries and register multiple time entries per day.
-            </p>
-          </div>
-          <div class="flex items-center gap-2">
-            <button hlmBtn variant="outline" type="button" (click)="previousMonth()">&lt;</button>
-            <input
-              hlmInput
-              type="month"
-              class="w-44"
-              [value]="selectedMonthValue()"
-              (change)="onMonthInputChange($event)"
-            />
-            <button hlmBtn variant="outline" type="button" (click)="nextMonth()">&gt;</button>
-            <button
-              hlmBtn
-              type="button"
-              size="icon"
-              variant="outline"
-              class="cursor-pointer"
-              [attr.aria-label]="'Add entry for ' + todayIso()"
-              (click)="openAddForDate(todayIso())"
-            >
-              <ng-icon hlm size="sm" name="lucidePlus" />
-            </button>
-          </div>
-        </header>
+        <app-time-entries-calendar-toolbar
+          [selectedMonthValue]="selectedMonthValue()"
+          [todayIso]="todayIso()"
+          (previousMonth)="previousMonth()"
+          (nextMonth)="nextMonth()"
+          (monthInputChange)="onMonthInputChange($event)"
+          (addToday)="openAddForDate(todayIso())"
+        />
 
         <div hlmSeparator></div>
 
@@ -99,12 +74,7 @@ type CalendarDay = {
           </p>
         }
 
-        <div class="flex items-center justify-between text-sm">
-          <div class="font-medium">{{ monthLabel() }}</div>
-          <div class="text-muted-foreground">
-            Total hours: {{ store.monthTotalHours().toFixed(2) }}
-          </div>
-        </div>
+        <app-time-entries-month-summary [monthLabel]="monthLabel()" [monthTotalHours]="store.monthTotalHours()" />
 
         @if (store.isLoading()) {
           <div class="grid gap-2 rounded-lg border border-border p-4">
@@ -114,105 +84,18 @@ type CalendarDay = {
           </div>
         }
 
-        <div class="overflow-hidden rounded-lg border border-border">
-          <div
-            class="grid grid-cols-7 border-b border-border bg-muted/40 text-xs font-medium uppercase tracking-wide"
-          >
-            @for (label of weekdayLabels; track label) {
-              <div class="border-r border-border p-2 last:border-r-0">{{ label }}</div>
-            }
-          </div>
-
-          <div class="grid grid-cols-7">
-            @for (day of calendarDays(); track day.date ?? $index) {
-              <div
-                class="relative min-h-32 border-r border-b border-border p-2 last:border-r-0"
-                [class.bg-muted/20]="!day.inCurrentMonth"
-              >
-                <div class="mb-2 flex items-center justify-between text-xs">
-                  <span class="font-medium">{{ day.dayNumber }}</span>
-                  @if (day.date) {
-                    <button
-                      hlmBtn
-                      variant="ghost"
-                      size="icon"
-                      type="button"
-                      class="cursor-pointer"
-                      (click)="openAddForDate(day.date)"
-                    >
-                      <ng-icon hlm name="lucidePlus" size="sm" aria-hidden="true" />
-                    </button>
-                  }
-                </div>
-
-                @if (day.date) {
-                  @let entries = entriesForDate(day.date);
-                  <div class="mb-1 text-xs text-muted-foreground">
-                    {{ dayTotal(day.date).toFixed(2) }} h
-                  </div>
-                  @if (entries.length === 1) {
-                    @let entry = entries[0];
-                    <button
-                      type="button"
-                      class="w-full rounded border border-border/50 border-l-[3px] bg-card px-2 py-1 text-left text-[11px] leading-tight hover:bg-accent cursor-pointer"
-                      [style.border-left-color]="entryClientAccent(entry)"
-                      (click)="editEntry(entry.id)"
-                    >
-                      <div class="font-medium">
-                        {{ entry.projectCode }}{{ entry.orderCode ? ' / ' + entry.orderCode : '' }}
-                      </div>
-                      <div class="text-muted-foreground">
-                        {{ entry.hours.toFixed(2) }}h · {{ entry.clientName }}
-                      </div>
-                    </button>
-                  } @else if (entries.length > 1) {
-                    <button
-                      type="button"
-                      class="relative mt-0.5 w-full touch-manipulation text-left outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
-                      (click)="openDayEntriesPicker(day.date)"
-                      [attr.aria-label]="
-                        'View ' + entries.length + ' entries on ' + formatDayHeading(day.date)
-                      "
-                    >
-                      <span
-                        class="pointer-events-none absolute inset-x-3 top-0 z-0 h-9 rounded-md border border-border/50 bg-muted/30 shadow-sm"
-                        aria-hidden="true"
-                      ></span>
-                      <span
-                        class="pointer-events-none absolute inset-x-1.5 top-1.5 z-10 h-9 rounded-md border border-border/60 bg-card/90 shadow-sm"
-                        aria-hidden="true"
-                      ></span>
-                      <span
-                        class="relative z-20 flex h-10 items-center justify-between gap-2 rounded-md border border-border bg-card px-2 py-1 text-[11px] shadow-sm"
-                      >
-                        <span class="flex min-w-0 flex-1 items-center gap-1.5 font-medium">
-                          @for (accent of entryAccentsForDate(day.date); track accent.key) {
-                            <span
-                              class="size-2 shrink-0 rounded-full ring-1 ring-border/50"
-                              [style.background-color]="accent.hex"
-                              [attr.title]="accent.label"
-                            ></span>
-                          }
-                          <ng-icon
-                            hlm
-                            name="lucideLayers"
-                            size="sm"
-                            class="size-3.5 shrink-0 opacity-80"
-                            aria-hidden="true"
-                          />
-                          <span class="truncate">{{ entries.length }} entries</span>
-                        </span>
-                        <span class="shrink-0 text-muted-foreground">
-                          {{ dayTotal(day.date).toFixed(2) }} h
-                        </span>
-                      </span>
-                    </button>
-                  }
-                }
-              </div>
-            }
-          </div>
-        </div>
+        <app-time-entries-calendar-grid
+          [weekdayLabels]="weekdayLabels"
+          [calendarDays]="calendarDays()"
+          [entriesForDate]="entriesForDateFn"
+          [dayTotal]="dayTotalFn"
+          [entryClientAccent]="entryClientAccentFn"
+          [entryAccentsForDate]="entryAccentsForDateFn"
+          [formatDayHeading]="formatDayHeadingFn"
+          (addForDate)="openAddForDate($event)"
+          (editEntry)="editEntry($event)"
+          (openDayEntriesPicker)="openDayEntriesPicker($event)"
+        />
 
         <button #sheetOpenButton class="hidden" hlmSheetTrigger side="right" type="button"></button>
         <ng-template hlmSheetPortal>
@@ -220,183 +103,42 @@ type CalendarDay = {
             <div hlmSheetHeader>
               <h2 hlmSheetTitle>{{ isEditing() ? 'Edit time entry' : 'Add time entry' }}</h2>
             </div>
-            <form
-              class="flex h-full flex-col gap-4 p-4"
-              [formGroup]="entryForm"
-              (ngSubmit)="submitEntry()"
-            >
-              <label class="grid gap-1 text-sm">
-                <span>Client *</span>
-                <div
-                  hlmCombobox
-                  [value]="selectedClientOption()"
-                  [itemToString]="optionToLabel"
-                  [isItemEqualToValue]="isSameOption"
-                  (valueChange)="onClientChange($event)"
-                >
-                  <hlm-combobox-trigger class="w-full justify-between">
-                    <span>{{ selectedClientOption()?.label ?? 'Select client' }}</span>
-                  </hlm-combobox-trigger>
-                  <ng-template hlmComboboxPortal>
-                    <div hlmComboboxContent>
-                      <div hlmComboboxList>
-                        @for (option of clientOptions(); track option.id) {
-                          <hlm-combobox-item [value]="option">{{ option.label }}</hlm-combobox-item>
-                        }
-                      </div>
-                    </div>
-                  </ng-template>
-                </div>
-              </label>
-
-              <label class="grid gap-1 text-sm">
-                <span>Project *</span>
-                <div
-                  hlmCombobox
-                  [value]="selectedProjectOption()"
-                  [itemToString]="optionToLabel"
-                  [isItemEqualToValue]="isSameOption"
-                  (valueChange)="onProjectChange($event)"
-                >
-                  <hlm-combobox-trigger class="w-full justify-between">
-                    <span>{{ selectedProjectOption()?.label ?? 'Select project' }}</span>
-                  </hlm-combobox-trigger>
-                  <ng-template hlmComboboxPortal>
-                    <div hlmComboboxContent>
-                      <div hlmComboboxList>
-                        @for (option of filteredProjectOptions(); track option.id) {
-                          <hlm-combobox-item [value]="option">{{ option.label }}</hlm-combobox-item>
-                        }
-                      </div>
-                    </div>
-                  </ng-template>
-                </div>
-              </label>
-
-              @if (selectedProjectRequiresOrder()) {
-                <label class="grid gap-1 text-sm">
-                  <span>Order *</span>
-                  <div
-                    hlmCombobox
-                    [value]="selectedOrderOption()"
-                    [itemToString]="optionToLabel"
-                    [isItemEqualToValue]="isSameOption"
-                    (valueChange)="onOrderChange($event)"
-                  >
-                    <hlm-combobox-trigger class="w-full justify-between">
-                      <span>{{ selectedOrderOption()?.label ?? 'Select order' }}</span>
-                    </hlm-combobox-trigger>
-                    <ng-template hlmComboboxPortal>
-                      <div hlmComboboxContent>
-                        <div hlmComboboxList>
-                          @for (option of filteredOrderOptions(); track option.id) {
-                            <hlm-combobox-item [value]="option">{{
-                              option.label
-                            }}</hlm-combobox-item>
-                          }
-                        </div>
-                      </div>
-                    </ng-template>
-                  </div>
-                </label>
-              }
-
-              <div class="grid grid-cols-2 gap-3">
-                <label class="grid gap-1 text-sm">
-                  <span>Date *</span>
-                  <input hlmInput type="date" formControlName="date" />
-                </label>
-                <label class="grid gap-1 text-sm">
-                  <span>Hours *</span>
-                  <input hlmInput type="number" min="0.25" step="0.25" formControlName="hours" />
-                </label>
-              </div>
-
-              <label class="grid gap-1 text-sm">
-                <span>Description</span>
-                <input
-                  hlmInput
-                  type="text"
-                  formControlName="description"
-                  placeholder="Daily work summary"
-                />
-              </label>
-
-              @if (entryForm.invalid && (entryForm.touched || entryForm.dirty)) {
-                <p class="text-sm text-destructive">
-                  Please complete all required fields correctly.
-                </p>
-              }
-
-              <div
-                class="mt-auto flex items-center justify-between gap-2 border-t border-border/40 pt-3"
-              >
-                <app-crud-sheet-footer
-                  [isEditing]="isEditing()"
-                  [isLoading]="store.isLoading()"
-                  [isValid]="entryForm.valid && cascadeIsValid()"
-                  createLabel="Create entry"
-                  updateLabel="Save changes"
-                  (clearRequested)="resetForm(entryForm.controls.date.value || todayIso())"
-                  (cancelRequested)="cancelSheet()"
-                />
-                @if (isEditing()) {
-                  <button
-                    hlmBtn
-                    variant="outline"
-                    type="button"
-                    class="cursor-pointer"
-                    (click)="deleteEditingEntry()"
-                  >
-                    Delete
-                  </button>
-                }
-              </div>
-              <button #sheetCloseButton class="hidden" hlmSheetClose type="button"></button>
-            </form>
+            <app-time-entry-sheet-form
+              [form]="entryForm"
+              [isEditing]="isEditing()"
+              [isLoading]="store.isLoading()"
+              [isValid]="entryForm.valid && cascadeIsValid()"
+              [clientOptions]="clientOptions()"
+              [filteredProjectOptions]="filteredProjectOptions()"
+              [filteredOrderOptions]="filteredOrderOptions()"
+              [selectedClientOption]="selectedClientOption()"
+              [selectedProjectOption]="selectedProjectOption()"
+              [selectedOrderOption]="selectedOrderOption()"
+              [selectedProjectRequiresOrder]="selectedProjectRequiresOrder()"
+              [optionToLabel]="optionToLabel"
+              [isSameOption]="isSameOption"
+              (submitted)="submitEntry()"
+              (clientChanged)="onClientChange($event)"
+              (projectChanged)="onProjectChange($event)"
+              (orderChanged)="onOrderChange($event)"
+              (clearRequested)="resetForm(entryForm.controls.date.value || todayIso())"
+              (cancelRequested)="cancelSheet()"
+              (deleteRequested)="deleteEditingEntry()"
+            />
+            <button #sheetCloseButton class="hidden" hlmSheetClose type="button"></button>
           </hlm-sheet-content>
         </ng-template>
-
-        <hlm-dialog
+        <app-time-entries-day-picker-dialog
           [state]="dayPickerDialogState()"
           [ariaLabel]="dayPickerDialogAriaLabel()"
-          [ariaModal]="true"
+          [pickerDate]="dayEntriesPickerDate()"
+          [entries]="dayEntriesPickerDate() ? entriesForDate(dayEntriesPickerDate()!) : []"
+          [dayTotal]="dayEntriesPickerDate() ? dayTotal(dayEntriesPickerDate()!) : 0"
+          [formatDayHeading]="formatDayHeadingFn"
+          [entryClientAccent]="entryClientAccentFn"
           (closed)="closeDayEntriesPicker()"
-        >
-          <ng-template hlmDialogPortal>
-            <hlm-dialog-content
-              [showCloseButton]="true"
-              class="max-h-[min(70vh,520px)] gap-0 overflow-hidden border-border p-0 shadow-sm sm:max-w-md"
-            >
-              @if (dayEntriesPickerDate(); as pickerDate) {
-                <hlm-dialog-header class="border-b border-border px-4 pb-3 pe-14 pt-4 text-start">
-                  <h2 hlmDialogTitle class="text-base">{{ formatDayHeading(pickerDate) }}</h2>
-                  <p hlmDialogDescription class="text-xs">
-                    {{ entriesForDate(pickerDate).length }} entries ·
-                    {{ dayTotal(pickerDate).toFixed(2) }} h total
-                  </p>
-                </hlm-dialog-header>
-                <div class="max-h-[min(55vh,400px)] overflow-y-auto p-2">
-                  @for (entry of entriesForDate(pickerDate); track entry.id) {
-                    <button
-                      type="button"
-                      class="mb-2 w-full rounded-md border border-border border-l-[3px] bg-card px-3 py-2 text-left text-sm last:mb-0 hover:bg-accent/70"
-                      [style.border-left-color]="entryClientAccent(entry)"
-                      (click)="pickEntryFromDayPicker(entry.id)"
-                    >
-                      <div class="font-medium">
-                        {{ entry.projectCode }}{{ entry.orderCode ? ' / ' + entry.orderCode : '' }}
-                      </div>
-                      <div class="text-xs text-muted-foreground">
-                        {{ entry.hours.toFixed(2) }}h · {{ entry.clientName }}
-                      </div>
-                    </button>
-                  }
-                </div>
-              }
-            </hlm-dialog-content>
-          </ng-template>
-        </hlm-dialog>
+          (entryPicked)="pickEntryFromDayPicker($event)"
+        />
       </section>
     </hlm-sheet>
   `,
@@ -428,6 +170,12 @@ export class TimeEntriesPage implements OnInit {
     return d ? `Entries for ${this.formatDayHeading(d)}` : '';
   });
   protected readonly weekdayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  protected readonly entriesForDateFn = (date: string) => this.entriesForDate(date);
+  protected readonly dayTotalFn = (date: string) => this.dayTotal(date);
+  protected readonly entryClientAccentFn = (entry: { clientId: number; clientAccentColor: string | null }) =>
+    this.entryClientAccent(entry);
+  protected readonly entryAccentsForDateFn = (date: string) => this.entryAccentsForDate(date);
+  protected readonly formatDayHeadingFn = (isoDate: string) => this.formatDayHeading(isoDate);
 
   protected readonly entryForm = this.formBuilder.group({
     clientId: [null as number | null, [Validators.required]],
