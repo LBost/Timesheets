@@ -44,6 +44,33 @@ import { SettingsStore } from '../state/settings.store';
             </span>
           </label>
 
+          <div class="grid gap-1.5 text-sm">
+            <span class="font-medium">Default time entries view *</span>
+            <div class="inline-flex w-fit items-center rounded-md border border-border p-1">
+              <button
+                hlmBtn
+                type="button"
+                size="sm"
+                variant="ghost"
+                [class.bg-accent]="settingsForm.controls.preferredTimeEntriesView.value === 'month'"
+                (click)="setPreferredTimeEntriesView('month')"
+              >
+                Month
+              </button>
+              <button
+                hlmBtn
+                type="button"
+                size="sm"
+                variant="ghost"
+                [class.bg-accent]="settingsForm.controls.preferredTimeEntriesView.value === 'week'"
+                (click)="setPreferredTimeEntriesView('week')"
+              >
+                Week
+              </button>
+            </div>
+            <span class="text-xs text-muted-foreground">Sets the default Time Entries page view.</span>
+          </div>
+
           @if (nextInvoiceNumberControl.touched && nextInvoiceNumberControl.invalid) {
             <p class="text-sm text-destructive">Enter a value like INV-20260001.</p>
           }
@@ -90,6 +117,7 @@ export class SettingsPage implements OnInit {
       '',
       [Validators.required, Validators.pattern(/^[A-Z]{2,10}-\d{8}$/), Validators.maxLength(20)],
     ],
+    preferredTimeEntriesView: ['month' as 'month' | 'week', [Validators.required]],
   });
 
   protected readonly isBusy = computed(() => this.store.isLoading() || this.store.isSaving());
@@ -107,6 +135,7 @@ export class SettingsPage implements OnInit {
     this.settingsForm.reset(
       {
         nextInvoiceNumber: this.store.nextInvoiceNumber(),
+        preferredTimeEntriesView: this.store.preferredTimeEntriesView(),
       },
       { emitEvent: false },
     );
@@ -119,12 +148,24 @@ export class SettingsPage implements OnInit {
     }
 
     const nextInvoiceNumber = this.settingsForm.controls.nextInvoiceNumber.value ?? '';
-    const saved = await this.store.saveSettings(nextInvoiceNumber);
+    const preferredTimeEntriesView =
+      this.settingsForm.controls.preferredTimeEntriesView.value ?? 'month';
+    const saved = await this.store.saveSettings(nextInvoiceNumber, preferredTimeEntriesView);
     if (!saved) {
       return;
     }
 
     this.resetToStored();
     this.toast.show('Settings saved.', 'success');
+  }
+
+  protected setPreferredTimeEntriesView(view: 'month' | 'week'): void {
+    const control = this.settingsForm.controls.preferredTimeEntriesView;
+    if (control.value === view) {
+      return;
+    }
+    control.setValue(view);
+    control.markAsDirty();
+    this.settingsForm.markAsDirty();
   }
 }

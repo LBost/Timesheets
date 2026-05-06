@@ -4,6 +4,7 @@ import { SettingsRepository } from '../data/settings.repository';
 
 type SettingsState = {
   nextInvoiceNumber: string;
+  preferredTimeEntriesView: 'month' | 'week';
   isLoading: boolean;
   isSaving: boolean;
   error: string | null;
@@ -11,6 +12,7 @@ type SettingsState = {
 
 const initialState: SettingsState = {
   nextInvoiceNumber: '',
+  preferredTimeEntriesView: 'month',
   isLoading: false,
   isSaving: false,
   error: null,
@@ -26,6 +28,7 @@ export const SettingsStore = signalStore(
         const settings = await repository.getSettings();
         patchState(store, {
           nextInvoiceNumber: settings.nextInvoiceNumber,
+          preferredTimeEntriesView: settings.preferredTimeEntriesView,
           isLoading: false,
         });
       } catch (error) {
@@ -35,12 +38,13 @@ export const SettingsStore = signalStore(
         });
       }
     },
-    async saveSettings(nextInvoiceNumber: string): Promise<boolean> {
+    async saveSettings(nextInvoiceNumber: string, preferredTimeEntriesView: 'month' | 'week'): Promise<boolean> {
       patchState(store, { isSaving: true, error: null });
       try {
-        const settings = await repository.saveSettings({ nextInvoiceNumber });
+        const settings = await repository.saveSettings({ nextInvoiceNumber, preferredTimeEntriesView });
         patchState(store, {
           nextInvoiceNumber: settings.nextInvoiceNumber,
+          preferredTimeEntriesView: settings.preferredTimeEntriesView,
           isSaving: false,
         });
         return true;

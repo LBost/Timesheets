@@ -18,6 +18,7 @@ import { resolveClientAccentHex } from '../../../shared/components/client-accent
 import { ClientsRepository } from '../../clients/data/clients.repository';
 import { OrdersRepository } from '../../orders/data/orders.repository';
 import { ProjectsRepository } from '../../projects/data/projects.repository';
+import { SettingsRepository } from '../../settings/data/settings.repository';
 import { TimeEntryCreateInput, TimeEntryUpdateInput } from '../models/time-entry.model';
 import { TimeEntriesStore } from '../state/time-entries.store';
 import { provideIcons } from '@ng-icons/core';
@@ -173,6 +174,7 @@ export class TimeEntriesPage implements OnInit {
   private readonly clientsRepository = inject(ClientsRepository);
   private readonly projectsRepository = inject(ProjectsRepository);
   private readonly ordersRepository = inject(OrdersRepository);
+  private readonly settingsRepository = inject(SettingsRepository);
   private readonly toast = inject(ToastService);
 
   @ViewChild('sheetOpenButton', { read: ElementRef })
@@ -267,10 +269,11 @@ export class TimeEntriesPage implements OnInit {
   });
 
   async ngOnInit(): Promise<void> {
-    const [clients, projects, orders] = await Promise.all([
+    const [clients, projects, orders, settings] = await Promise.all([
       this.clientsRepository.listClients(),
       this.projectsRepository.listProjects(),
       this.ordersRepository.listOrders(),
+      this.settingsRepository.getSettings(),
     ]);
 
     this.clientOptions.set(
@@ -291,9 +294,13 @@ export class TimeEntriesPage implements OnInit {
         label: `${order.code} - ${order.title}`,
       })),
     );
+    this.viewMode.set(settings.preferredTimeEntriesView);
     this.autoSelectSingleCascadeOptions();
-
-    await this.store.loadMonthEntries();
+    if (this.viewMode() === 'week') {
+      await this.store.setSelectedMonth(this.monthAnchorForWeek());
+    } else {
+      await this.store.loadMonthEntries();
+    }
   }
 
   protected formatDayHeading(isoDate: string): string {
@@ -363,6 +370,7 @@ export class TimeEntriesPage implements OnInit {
     const previous = new Date(current);
     previous.setDate(current.getDate() - 7);
     this.selectedWeekStart.set(this.startOfWeek(previous));
+    void this.store.setSelectedMonth(this.monthAnchorForWeek());
   }
 
   protected nextPeriod(): void {
@@ -375,6 +383,7 @@ export class TimeEntriesPage implements OnInit {
     const next = new Date(current);
     next.setDate(current.getDate() + 7);
     this.selectedWeekStart.set(this.startOfWeek(next));
+    void this.store.setSelectedMonth(this.monthAnchorForWeek());
   }
 
   protected onMonthInputChange(event: Event): void {
@@ -400,14 +409,17 @@ export class TimeEntriesPage implements OnInit {
       return;
     }
     this.selectedWeekStart.set(parsed);
+    void this.store.setSelectedMonth(this.monthAnchorForWeek());
   }
 
   protected onViewModeChange(mode: 'month' | 'week'): void {
     this.viewMode.set(mode);
+    void this.settingsRepository.savePreferredTimeEntriesView(mode);
     this.closeDayEntriesPicker();
     if (mode === 'week') {
       const monthAnchor = this.store.selectedMonth();
       this.selectedWeekStart.set(this.startOfWeek(monthAnchor));
+      void this.store.setSelectedMonth(this.monthAnchorForWeek());
     }
   }
 
@@ -607,6 +619,11 @@ export class TimeEntriesPage implements OnInit {
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+  }
+
+  private monthAnchorForWeek(): Date {
+    const weekStart = this.selectedWeekStart();
+    return new Date(weekStart.getFullYear(), weekStart.getMonth(), 1);
   }
 
   private startOfWeek(date: Date): Date {

@@ -4,6 +4,7 @@ import { AppSettings, AppSettingsUpdateInput } from '../models/settings.model';
 const SETTINGS_KEY = 'timesheets.settings';
 const DEFAULT_SETTINGS: AppSettings = {
   nextInvoiceNumber: 'RLZ-20260001',
+  preferredTimeEntriesView: 'month',
 };
 
 @Injectable({ providedIn: 'root' })
@@ -21,6 +22,8 @@ export class SettingsRepository {
           typeof parsed.nextInvoiceNumber === 'string' && parsed.nextInvoiceNumber.trim().length > 0
             ? parsed.nextInvoiceNumber.trim()
             : DEFAULT_SETTINGS.nextInvoiceNumber,
+        preferredTimeEntriesView:
+          parsed.preferredTimeEntriesView === 'week' ? 'week' : DEFAULT_SETTINGS.preferredTimeEntriesView,
       };
     } catch {
       return { ...DEFAULT_SETTINGS };
@@ -30,8 +33,17 @@ export class SettingsRepository {
   async saveSettings(input: AppSettingsUpdateInput): Promise<AppSettings> {
     const normalized: AppSettings = {
       nextInvoiceNumber: input.nextInvoiceNumber.trim(),
+      preferredTimeEntriesView: input.preferredTimeEntriesView === 'week' ? 'week' : 'month',
     };
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(normalized));
     return normalized;
+  }
+
+  async savePreferredTimeEntriesView(view: 'month' | 'week'): Promise<AppSettings> {
+    const current = await this.getSettings();
+    return this.saveSettings({
+      nextInvoiceNumber: current.nextInvoiceNumber,
+      preferredTimeEntriesView: view,
+    });
   }
 }

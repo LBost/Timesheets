@@ -4,6 +4,7 @@
 
 - Settings are stored in local storage under `timesheets.settings`.
 - Implemented field: `nextInvoiceNumber` (example: `RLZ-20260001`).
+- Implemented field: `preferredTimeEntriesView` (`month` or `week`).
 - Settings page lets users edit and save this value.
 
 ## Planned invoice creation integration
