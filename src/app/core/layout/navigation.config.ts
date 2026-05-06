@@ -5,7 +5,8 @@ export type LucideNavIconName =
   | 'lucideBuilding2'
   | 'lucideClipboardList'
   | 'lucideFolderKanban'
-  | 'lucideReceipt';
+  | 'lucideReceipt'
+  | 'lucideSettings';
 
 export type NavigationItem = {
   label: string;
@@ -67,5 +68,14 @@ export const APP_NAVIGATION: NavigationSection[] = [
         comingSoon: true
       }
     ]
+  }
+];
+
+export const APP_NAVIGATION_FOOTER: NavigationItem[] = [
+  {
+    label: 'Settings',
+    route: '/settings',
+    icon: 'lucideSettings',
+    enabled: true
   }
 ];

@@ -4,6 +4,7 @@ import { ClientsPage } from './features/clients/ui/clients.page';
 import { DashboardPage } from './features/dashboard/dashboard.page';
 import { OrdersPage } from './features/orders/ui/orders.page';
 import { ProjectsPage } from './features/projects/ui/projects.page';
+import { SettingsPage } from './features/settings/ui/settings.page';
 import { TimeEntriesPage } from './features/time-entries/ui/time-entries.page';
 
 export const routes: Routes = [
@@ -15,7 +16,8 @@ export const routes: Routes = [
       { path: 'time-entries', component: TimeEntriesPage },
       { path: 'clients', component: ClientsPage },
       { path: 'projects', component: ProjectsPage },
-      { path: 'orders', component: OrdersPage }
+      { path: 'orders', component: OrdersPage },
+      { path: 'settings', component: SettingsPage }
     ]
   }
 ];

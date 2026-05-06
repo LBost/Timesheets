@@ -3,12 +3,13 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { NgIcon } from '@ng-icons/core';
 import { ThemeService } from '../theme/theme.service';
 import { ToastService } from '../feedback/toast.service';
-import { APP_NAVIGATION } from './navigation.config';
+import { APP_NAVIGATION, APP_NAVIGATION_FOOTER } from './navigation.config';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmCollapsibleImports } from '@spartan-ng/helm/collapsible';
 import {
   HlmSidebar,
   HlmSidebarContent,
+  HlmSidebarFooter,
   HlmSidebarGroup,
   HlmSidebarGroupContent,
   HlmSidebarGroupLabel,
@@ -31,6 +32,7 @@ import {
     HlmButtonImports,
     HlmSidebar,
     HlmSidebarContent,
+    HlmSidebarFooter,
     HlmSidebarGroup,
     HlmSidebarGroupContent,
     HlmSidebarGroupLabel,
@@ -48,6 +50,7 @@ import {
 })
 export class AppShellComponent {
   protected readonly navSections = APP_NAVIGATION;
+  protected readonly navFooterItems = APP_NAVIGATION_FOOTER;
   protected readonly theme = inject(ThemeService);
   protected readonly toast = inject(ToastService);
 
