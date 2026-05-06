@@ -242,6 +242,7 @@ export class TimeEntriesPage implements OnInit {
         label: `${order.code} - ${order.title}`,
       })),
     );
+    this.autoSelectSingleCascadeOptions();
 
     await this.store.loadMonthEntries();
   }
@@ -395,11 +396,13 @@ export class TimeEntriesPage implements OnInit {
     this.entryForm.controls.clientId.setValue(option?.id ?? null);
     this.entryForm.controls.projectId.setValue(null);
     this.entryForm.controls.orderId.setValue(null);
+    this.autoSelectSingleCascadeOptions();
   }
 
   protected onProjectChange(option: ProjectOption | null): void {
     this.entryForm.controls.projectId.setValue(option?.id ?? null);
     this.entryForm.controls.orderId.setValue(null);
+    this.autoSelectSingleCascadeOptions();
   }
 
   protected onOrderChange(option: OrderOption | null): void {
@@ -483,6 +486,7 @@ export class TimeEntriesPage implements OnInit {
       hours: 1,
       description: '',
     });
+    this.autoSelectSingleCascadeOptions();
   }
 
   protected cancelSheet(): void {
@@ -521,5 +525,31 @@ export class TimeEntriesPage implements OnInit {
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+  }
+
+  private autoSelectSingleCascadeOptions(): void {
+    if (this.clientOptions().length === 1) {
+      this.entryForm.controls.clientId.setValue(this.clientOptions()[0]?.id ?? null);
+    }
+
+    const currentClientId = this.entryForm.controls.clientId.value;
+    const projects = currentClientId === null
+      ? []
+      : this.projectOptions().filter((project) => project.clientId === currentClientId);
+    if (projects.length === 1) {
+      this.entryForm.controls.projectId.setValue(projects[0]?.id ?? null);
+    }
+
+    const currentProjectId = this.entryForm.controls.projectId.value;
+    const selectedProject = this.projectOptions().find((project) => project.id === currentProjectId);
+    if (!selectedProject?.useOrders) {
+      this.entryForm.controls.orderId.setValue(null);
+      return;
+    }
+
+    const orders = this.orderOptions().filter((order) => order.projectId === selectedProject.id);
+    if (orders.length === 1) {
+      this.entryForm.controls.orderId.setValue(orders[0]?.id ?? null);
+    }
   }
 }
