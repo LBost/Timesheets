@@ -366,12 +366,10 @@ type CalendarDay = {
           <ng-template hlmDialogPortal>
             <hlm-dialog-content
               [showCloseButton]="true"
-              class="max-h-[min(70vh,520px)] gap-0 overflow-hidden p-0 sm:max-w-md"
+              class="max-h-[min(70vh,520px)] gap-0 overflow-hidden border-border p-0 shadow-sm sm:max-w-md"
             >
               @if (dayEntriesPickerDate(); as pickerDate) {
-                <hlm-dialog-header
-                  class="border-b border-border/40 px-4 pb-3 pe-14 pt-4 text-start"
-                >
+                <hlm-dialog-header class="border-b border-border px-4 pb-3 pe-14 pt-4 text-start">
                   <h2 hlmDialogTitle class="text-base">{{ formatDayHeading(pickerDate) }}</h2>
                   <p hlmDialogDescription class="text-xs">
                     {{ entriesForDate(pickerDate).length }} entries ·
@@ -382,7 +380,7 @@ type CalendarDay = {
                   @for (entry of entriesForDate(pickerDate); track entry.id) {
                     <button
                       type="button"
-                      class="mb-2 w-full rounded-md border border-border/50 border-l-[3px] bg-card px-3 py-2 text-left text-sm last:mb-0 hover:bg-accent"
+                      class="mb-2 w-full rounded-md border border-border border-l-[3px] bg-card px-3 py-2 text-left text-sm last:mb-0 hover:bg-accent/70"
                       [style.border-left-color]="entryClientAccent(entry)"
                       (click)="pickEntryFromDayPicker(entry.id)"
                     >
