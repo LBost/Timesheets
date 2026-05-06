@@ -10,17 +10,13 @@ import { AuthService } from '../data/auth.service';
   selector: 'app-login-page',
   imports: [ReactiveFormsModule, HlmButtonImports, HlmInputImports],
   template: `
-    <main
-      class="grid min-h-dvh place-items-center bg-background p-6 text-foreground"
-    >
+    <main class="grid min-h-dvh place-items-center bg-background p-6 text-foreground">
       <section
         class="w-full max-w-sm space-y-6 rounded-xl border border-border bg-card p-8 shadow-sm"
       >
         <header class="space-y-1">
           <h1 class="text-2xl font-semibold tracking-tight">Sign in</h1>
-          <p class="text-sm text-muted-foreground">
-            Enter your Supabase account credentials to continue.
-          </p>
+          <p class="text-sm text-muted-foreground">Enter your account credentials to continue.</p>
         </header>
 
         <form class="grid gap-4" [formGroup]="loginForm" (ngSubmit)="submit()">
@@ -95,9 +91,7 @@ export class LoginPage {
       await this.auth.signIn(email, password);
       await this.router.navigateByUrl('/');
     } catch (error) {
-      this.errorMessage.set(
-        error instanceof Error ? error.message : 'Sign-in failed. Try again.'
-      );
+      this.errorMessage.set(error instanceof Error ? error.message : 'Sign-in failed. Try again.');
     } finally {
       this.isSubmitting.set(false);
     }
