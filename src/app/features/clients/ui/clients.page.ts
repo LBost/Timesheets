@@ -12,7 +12,6 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmSeparatorImports } from '@spartan-ng/helm/separator';
 import { HlmSheetImports } from '@spartan-ng/helm/sheet';
-import { HlmSkeletonImports } from '@spartan-ng/helm/skeleton';
 import { ToastService } from '../../../core/feedback/toast.service';
 import { FeatureHeaderActionsComponent } from '../../../shared/components/feature-header-actions/feature-header-actions.component';
 import {
@@ -22,6 +21,7 @@ import {
 } from '../../../shared/components/client-accent/client-accent.util';
 import { ClientsStore } from '../state/clients.store';
 import { ClientCreateInput, ClientUpdateInput } from '../models/client.model';
+import { ClientsFeedbackStateComponent } from './components/clients-feedback-state.component';
 import { ClientsSheetFormComponent } from './components/clients-sheet-form.component';
 import { ClientsTableComponent } from './components/clients-table.component';
 
@@ -32,8 +32,8 @@ import { ClientsTableComponent } from './components/clients-table.component';
     HlmButtonImports,
     HlmSeparatorImports,
     HlmSheetImports,
-    HlmSkeletonImports,
     FeatureHeaderActionsComponent,
+    ClientsFeedbackStateComponent,
     ClientsSheetFormComponent,
     ClientsTableComponent,
   ],
@@ -79,21 +79,10 @@ import { ClientsTableComponent } from './components/clients-table.component';
       </hlm-sheet>
       <div hlmSeparator></div>
 
-      @if (store.error()) {
-        <p
-          class="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
-        >
-          {{ store.error() }}
-        </p>
-      }
-
-      @if (showLoadingSkeleton()) {
-        <div class="grid gap-2 rounded-lg border border-border p-4">
-          <div hlmSkeleton class="h-5 w-1/3"></div>
-          <div hlmSkeleton class="h-4 w-full"></div>
-          <div hlmSkeleton class="h-4 w-5/6"></div>
-        </div>
-      }
+      <app-clients-feedback-state
+        [storeError]="store.error()"
+        [isLoading]="showLoadingSkeleton()"
+      />
 
       <app-clients-table
         [clients]="store.clients()"

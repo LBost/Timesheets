@@ -1,6 +1,9 @@
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import type { ColumnDef } from '@tanstack/table-core';
-import { EntityDataTableComponent } from '../../../../shared/components/entity-data-table/entity-data-table.component';
+import {
+  type EntityDataTableColumnFilter,
+  EntityDataTableComponent,
+} from '../../../../shared/components/entity-data-table/entity-data-table.component';
 import type { EntityTableRow } from '../../../../shared/components/entity-data-table/entity-table-row.model';
 import { OrderVM } from '../../models/order.vm';
 import { createOrderColumns, orderGlobalFilterText } from './orders-table.columns';
@@ -13,6 +16,7 @@ import { createOrderColumns, orderGlobalFilterText } from './orders-table.column
       [data]="orders()"
       [columns]="columns"
       [globalFilterRowText]="globalFilterRowTextFn"
+      [columnFiltersConfig]="columnFilters()"
       filterPlaceholder="Filter orders…"
       emptyMessage="No orders yet."
       (addRequested)="addRequested.emit()"
@@ -33,4 +37,25 @@ export class OrdersTableComponent {
 
   protected readonly columns = createOrderColumns() as ColumnDef<EntityTableRow>[];
   protected readonly globalFilterRowTextFn = orderGlobalFilterText;
+  protected readonly columnFilters = computed<readonly EntityDataTableColumnFilter[]>(() => {
+    const projectNames = [...new Set(this.orders().map((o) => o.projectName))]
+      .filter(Boolean)
+      .sort((a, b) => a.localeCompare(b));
+
+    return [
+      {
+        columnId: 'project',
+        label: 'Project',
+        options: projectNames.map((name) => ({ label: name, value: name })),
+      },
+      {
+        columnId: 'status',
+        label: 'Status',
+        options: [
+          { label: 'Active', value: 'active' },
+          { label: 'Inactive', value: 'inactive' },
+        ],
+      },
+    ];
+  });
 }

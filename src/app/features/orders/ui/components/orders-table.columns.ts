@@ -17,19 +17,27 @@ export function createOrderColumns(): ColumnDef<OrderVM>[] {
     },
     {
       id: 'project',
-      accessorFn: (row) => `${row.projectName} ${row.projectCode}`,
+      accessorFn: (row) => row.projectName,
       meta: { headerLabel: 'Project', columnMenuLabel: 'Project' },
       header: () => flexRenderComponent(DataTableSortHeaderComponent),
       cell: () => flexRenderComponent(OrderProjectCellComponent),
       enableSorting: true,
+      filterFn: (row, columnId, filterValue) => {
+        if (!filterValue) return true;
+        return row.getValue<string>(columnId) === filterValue;
+      },
     },
     {
-      accessorKey: 'isActive',
+      accessorFn: (row) => (row.isActive ? 'active' : 'inactive'),
       id: 'status',
       meta: { headerLabel: 'Status', columnMenuLabel: 'Status' },
       header: () => flexRenderComponent(DataTableSortHeaderComponent),
-      cell: (info) => (info.getValue<boolean>() ? 'Active' : 'Inactive'),
+      cell: (info) => (info.getValue<string>() === 'active' ? 'Active' : 'Inactive'),
       enableSorting: true,
+      filterFn: (row, columnId, filterValue) => {
+        if (!filterValue) return true;
+        return row.getValue<string>(columnId) === filterValue;
+      },
     },
     {
       accessorKey: 'timeEntryCount',
