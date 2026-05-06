@@ -45,12 +45,12 @@ export class OrdersTableComponent {
     return [
       {
         columnId: 'project',
-        label: 'Project',
+        label: 'Projects',
         options: projectNames.map((name) => ({ label: name, value: name })),
       },
       {
         columnId: 'status',
-        label: 'Status',
+        label: 'Statuses',
         options: [
           { label: 'Active', value: 'active' },
           { label: 'Inactive', value: 'inactive' },
