@@ -10,6 +10,30 @@ export interface OrderRecord {
   createdAt: Date;
 }
 
+/**
+ * Raw Supabase row using camelCase aliases (`projectId:project_id`, etc.) set
+ * in `orders.repository.ts`. `createdAt` arrives as an ISO string.
+ */
+export interface OrderRow {
+  id: number;
+  code: string;
+  title: string;
+  projectId: number;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export function fromOrderRow(row: OrderRow): OrderRecord {
+  return {
+    id: row.id,
+    code: row.code,
+    title: row.title,
+    projectId: row.projectId,
+    isActive: row.isActive,
+    createdAt: new Date(row.createdAt),
+  };
+}
+
 export function toOrderModel(order: OrderRecord): OrderModel {
   return {
     id: order.id,

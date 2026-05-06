@@ -36,7 +36,7 @@
     "@ng-icons/lucide": "^33.2.2",
     "@ngrx/signals": "^21.1.0",
     "@spartan-ng/brain": "^0.0.1-alpha.684",
-    "better-sqlite3": "^12.4.1",
+    "@supabase/supabase-js": "^2.105.3",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.2",

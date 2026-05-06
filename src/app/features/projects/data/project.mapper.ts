@@ -1,4 +1,4 @@
-import { ProjectCreateInput, ProjectModel, ProjectUpdateInput } from '../models/project.model';
+import { BillingModel, ProjectCreateInput, ProjectModel, ProjectUpdateInput } from '../models/project.model';
 import { ProjectVM } from '../models/project.vm';
 
 export interface ProjectRecord {
@@ -13,6 +13,48 @@ export interface ProjectRecord {
   clientId: number;
   isActive: boolean;
   createdAt: Date;
+}
+
+/**
+ * Raw Supabase row shape using camelCase aliases set in
+ * `projects.repository.ts`. `createdAt` arrives as an ISO string.
+ */
+export interface ProjectRow {
+  id: number;
+  name: string;
+  code: string;
+  unitRate: number;
+  unit: string;
+  currency: string;
+  billingModel: string | null;
+  useOrders: boolean;
+  clientId: number;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export function fromProjectRow(row: ProjectRow): ProjectRecord {
+  return {
+    id: row.id,
+    name: row.name,
+    code: row.code,
+    unitRate: row.unitRate,
+    unit: row.unit,
+    currency: row.currency,
+    billingModel: parseBillingModel(row.billingModel),
+    useOrders: row.useOrders,
+    clientId: row.clientId,
+    isActive: row.isActive,
+    createdAt: new Date(row.createdAt),
+  };
+}
+
+function parseBillingModel(value: string | null): BillingModel | null {
+  if (value === null) {
+    return null;
+  }
+  const known = Object.values(BillingModel) as string[];
+  return known.includes(value) ? (value as BillingModel) : null;
 }
 
 export function toProjectModel(project: ProjectRecord): ProjectModel {

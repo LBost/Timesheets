@@ -1,77 +1,127 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
+import { SupabaseClient } from '@supabase/supabase-js';
+
+import {
+  SUPABASE_CLIENT,
+  requireCurrentUserId,
+} from '../../../core/supabase/supabase.client';
+import { throwIfError } from '../../../core/supabase/postgrest.util';
+import { normalizeClientAccentHex } from '../../../shared/components/client-accent/client-accent.util';
 import { TimeEntryCreateInput, TimeEntryUpdateInput } from '../models/time-entry.model';
 import { TimeEntryVM } from '../models/time-entry.vm';
-import { normalizeClientAccentHex } from '../../../shared/components/client-accent/client-accent.util';
 import {
-  TimeEntryRecord,
+  TimeEntryRow,
+  fromTimeEntryRow,
   toTimeEntryInsertValues,
   toTimeEntryModel,
   toTimeEntryUpdateValues,
   toTimeEntryVM,
 } from './time-entry.mapper';
 
-type ClientRecord = {
+const TIME_ENTRY_SELECT =
+  'id, clientId:client_id, projectId:project_id, orderId:order_id, date, hours, description, createdAt:created_at';
+
+type ClientLookupRow = {
   id: number;
   name: string;
-  accentColor?: string | null;
-  isActive?: boolean;
+  accent_color: string | null;
+  is_active: boolean;
 };
 
-type ProjectRecord = {
+type ProjectLookupRow = {
   id: number;
-  clientId: number;
+  client_id: number;
   code: string;
   name: string;
-  useOrders?: boolean;
-  isActive?: boolean;
+  use_orders: boolean;
+  is_active: boolean;
 };
 
-type OrderRecord = {
+type OrderLookupRow = {
   id: number;
-  projectId: number;
+  project_id: number;
   code: string;
-  isActive?: boolean;
+  is_active: boolean;
 };
-
-const TIME_ENTRIES_KEY = 'timesheets.timeEntries';
-const CLIENTS_KEY = 'timesheets.clients';
-const PROJECTS_KEY = 'timesheets.projects';
-const ORDERS_KEY = 'timesheets.orders';
 
 @Injectable({ providedIn: 'root' })
 export class TimeEntriesRepository {
+  private readonly supabase: SupabaseClient = inject(SUPABASE_CLIENT);
+
   async listEntriesForMonth(year: number, month: number): Promise<TimeEntryVM[]> {
-    return this.getTimeEntryVMs().then((entries) =>
-      entries.filter((entry) => {
-        const date = new Date(`${entry.date}T00:00:00`);
-        return date.getFullYear() === year && date.getMonth() === month;
-      }),
-    );
+    const start = isoDate(new Date(year, month, 1));
+    const end = isoDate(new Date(year, month + 1, 1));
+
+    const { data: rows, error } = await this.supabase
+      .from('time_entries')
+      .select(TIME_ENTRY_SELECT)
+      .gte('date', start)
+      .lt('date', end)
+      .order('date', { ascending: true })
+      .order('id', { ascending: true })
+      .returns<TimeEntryRow[]>();
+    throwIfError(error, 'Failed to load time entries.');
+    if (!rows || rows.length === 0) {
+      return [];
+    }
+
+    const [clientsById, projectsById, ordersById] = await Promise.all([
+      this.getClientsById(),
+      this.getProjectsById(),
+      this.getOrdersById(),
+    ]);
+
+    return rows.map((row) => {
+      const record = fromTimeEntryRow(row);
+      const client = clientsById.get(record.clientId);
+      const project = projectsById.get(record.projectId);
+      const order = record.orderId === null ? null : ordersById.get(record.orderId);
+      return toTimeEntryVM(
+        toTimeEntryModel(record),
+        client?.name ?? 'Unknown client',
+        normalizeClientAccentHex(client?.accent_color ?? null) ?? null,
+        project?.code ?? 'UNKNOWN',
+        project?.name ?? 'Unknown project',
+        order?.code ?? null,
+      );
+    });
   }
 
   async getEntryById(id: number): Promise<TimeEntryVM | null> {
-    return this.getTimeEntryVMs().then((entries) => entries.find((entry) => entry.id === id) ?? null);
+    const { data: row, error } = await this.supabase
+      .from('time_entries')
+      .select(TIME_ENTRY_SELECT)
+      .eq('id', id)
+      .maybeSingle<TimeEntryRow>();
+    throwIfError(error, 'Failed to load time entry.');
+    if (!row) {
+      return null;
+    }
+
+    return this.hydrateSingle(row);
   }
 
   async createEntry(input: TimeEntryCreateInput): Promise<TimeEntryVM> {
+    const userId = await requireCurrentUserId(this.supabase);
     const payload = toTimeEntryInsertValues(input);
-    this.ensureValidCascade(payload.clientId, payload.projectId, payload.orderId);
+    await this.ensureValidCascade(payload.clientId, payload.projectId, payload.orderId);
 
-    const all = this.readEntries();
-    const nextId = all.length === 0 ? 1 : Math.max(...all.map((entry) => entry.id)) + 1;
-    const created: TimeEntryRecord = {
-      id: nextId,
-      clientId: payload.clientId,
-      projectId: payload.projectId,
-      orderId: payload.orderId,
-      date: payload.date,
-      hours: payload.hours,
-      description: payload.description,
-      createdAt: new Date(),
-    };
+    const { data: row, error } = await this.supabase
+      .from('time_entries')
+      .insert({
+        user_id: userId,
+        client_id: payload.clientId,
+        project_id: payload.projectId,
+        order_id: payload.orderId,
+        date: payload.date,
+        hours: payload.hours,
+        description: payload.description || null,
+      })
+      .select(TIME_ENTRY_SELECT)
+      .single<TimeEntryRow>();
+    throwIfError(error, 'Failed to create time entry.');
 
-    this.writeEntries([...all, created]);
-    return (await this.getEntryById(created.id)) as TimeEntryVM;
+    return this.hydrateSingle(row!);
   }
 
   async updateEntry(id: number, input: TimeEntryUpdateInput): Promise<TimeEntryVM | null> {
@@ -80,86 +130,111 @@ export class TimeEntriesRepository {
       return this.getEntryById(id);
     }
 
-    const all = this.readEntries();
-    const current = all.find((entry) => entry.id === id);
+    const { data: current, error: currentError } = await this.supabase
+      .from('time_entries')
+      .select('id, client_id, project_id, order_id')
+      .eq('id', id)
+      .maybeSingle<{ id: number; client_id: number; project_id: number; order_id: number | null }>();
+    throwIfError(currentError, 'Failed to load time entry.');
     if (!current) {
       return null;
     }
 
-    const nextClientId = values.clientId ?? current.clientId;
-    const nextProjectId = values.projectId ?? current.projectId;
-    const nextOrderId = values.orderId ?? current.orderId;
-    this.ensureValidCascade(nextClientId, nextProjectId, nextOrderId);
+    const nextClientId = values.clientId ?? current.client_id;
+    const nextProjectId = values.projectId ?? current.project_id;
+    const nextOrderId = values.orderId !== undefined ? values.orderId : current.order_id;
+    await this.ensureValidCascade(nextClientId, nextProjectId, nextOrderId);
 
-    this.writeEntries(all.map((entry) => (entry.id === id ? { ...entry, ...values } : entry)));
-    return this.getEntryById(id);
+    const updatePayload: Record<string, unknown> = {};
+    if (values.clientId !== undefined) updatePayload['client_id'] = values.clientId;
+    if (values.projectId !== undefined) updatePayload['project_id'] = values.projectId;
+    if (values.orderId !== undefined) updatePayload['order_id'] = values.orderId;
+    if (values.date !== undefined) updatePayload['date'] = values.date;
+    if (values.hours !== undefined) updatePayload['hours'] = values.hours;
+    if (values.description !== undefined) updatePayload['description'] = values.description || null;
+
+    const { data: row, error } = await this.supabase
+      .from('time_entries')
+      .update(updatePayload)
+      .eq('id', id)
+      .select(TIME_ENTRY_SELECT)
+      .maybeSingle<TimeEntryRow>();
+    throwIfError(error, 'Failed to update time entry.');
+    if (!row) {
+      return null;
+    }
+
+    return this.hydrateSingle(row);
   }
 
   async deleteEntry(id: number): Promise<boolean> {
-    const all = this.readEntries();
-    const exists = all.some((entry) => entry.id === id);
-    if (!exists) {
+    const { data: existingRow, error: existenceError } = await this.supabase
+      .from('time_entries')
+      .select('id')
+      .eq('id', id)
+      .maybeSingle<{ id: number }>();
+    throwIfError(existenceError, 'Failed to verify time entry.');
+    if (!existingRow) {
       return false;
     }
 
-    this.writeEntries(all.filter((entry) => entry.id !== id));
+    const { error } = await this.supabase.from('time_entries').delete().eq('id', id);
+    throwIfError(error, 'Failed to delete time entry.');
     return true;
   }
 
-  private async getTimeEntryVMs(): Promise<TimeEntryVM[]> {
-    const clientsById = new Map(this.readClients().map((client) => [client.id, client]));
-    const projectsById = new Map(this.readProjects().map((project) => [project.id, project]));
-    const ordersById = new Map(this.readOrders().map((order) => [order.id, order]));
+  private async hydrateSingle(row: TimeEntryRow): Promise<TimeEntryVM> {
+    const record = fromTimeEntryRow(row);
+    const [client, project, order] = await Promise.all([
+      this.getClientById(record.clientId),
+      this.getProjectById(record.projectId),
+      record.orderId === null ? Promise.resolve(null) : this.getOrderById(record.orderId),
+    ]);
 
-    return this.readEntries()
-      .map((entry) => {
-        const model = toTimeEntryModel(entry);
-        const client = clientsById.get(model.clientId);
-        const project = projectsById.get(model.projectId);
-        const order = model.orderId === null ? null : ordersById.get(model.orderId);
-        return toTimeEntryVM(
-          model,
-          client?.name ?? 'Unknown client',
-          normalizeClientAccentHex(client?.accentColor) ?? null,
-          project?.code ?? 'UNKNOWN',
-          project?.name ?? 'Unknown project',
-          order?.code ?? null,
-        );
-      })
-      .sort((left, right) => left.date.localeCompare(right.date) || left.id - right.id);
+    return toTimeEntryVM(
+      toTimeEntryModel(record),
+      client?.name ?? 'Unknown client',
+      normalizeClientAccentHex(client?.accent_color ?? null) ?? null,
+      project?.code ?? 'UNKNOWN',
+      project?.name ?? 'Unknown project',
+      order?.code ?? null,
+    );
   }
 
-  private ensureValidCascade(clientId: number, projectId: number, orderId: number | null): void {
-    const client = this.readClients().find((item) => item.id === clientId);
+  private async ensureValidCascade(
+    clientId: number,
+    projectId: number,
+    orderId: number | null,
+  ): Promise<void> {
+    const client = await this.getClientById(clientId);
     if (!client) {
       throw new Error('Selected client does not exist.');
     }
-    if (client.isActive === false) {
+    if (client.is_active === false) {
       throw new Error('Selected client is inactive.');
     }
 
-    const project = this.readProjects().find((item) => item.id === projectId);
+    const project = await this.getProjectById(projectId);
     if (!project) {
       throw new Error('Selected project does not exist.');
     }
-    if (project.isActive === false) {
+    if (project.is_active === false) {
       throw new Error('Selected project is inactive.');
     }
-    if (project.clientId !== clientId) {
+    if (project.client_id !== clientId) {
       throw new Error('Selected project does not belong to the selected client.');
     }
 
-    const useOrders = project.useOrders ?? false;
-    if (useOrders) {
+    if (project.use_orders) {
       if (orderId === null) {
         throw new Error('Order is required for projects that use orders.');
       }
 
-      const order = this.readOrders().find((item) => item.id === orderId);
-      if (!order || order.projectId !== projectId) {
+      const order = await this.getOrderById(orderId);
+      if (!order || order.project_id !== projectId) {
         throw new Error('Selected order does not belong to the selected project.');
       }
-      if (order.isActive === false) {
+      if (order.is_active === false) {
         throw new Error('Selected order is inactive.');
       }
       return;
@@ -170,73 +245,67 @@ export class TimeEntriesRepository {
     }
   }
 
-  private readEntries(): TimeEntryRecord[] {
-    const raw = localStorage.getItem(TIME_ENTRIES_KEY);
-    if (!raw) {
-      return [];
-    }
-
-    try {
-      const parsed = JSON.parse(raw) as Array<
-        Partial<Omit<TimeEntryRecord, 'createdAt'>> & { createdAt?: string; workDate?: string }
-      >;
-      return parsed
-        .filter((item) => typeof item.id === 'number' && typeof item.projectId === 'number')
-        .map((item) => ({
-          id: item.id as number,
-          clientId: (item.clientId as number | undefined) ?? 0,
-          projectId: item.projectId as number,
-          orderId: typeof item.orderId === 'number' ? item.orderId : null,
-          date: (item.date ?? item.workDate ?? '').toString(),
-          hours: Number(item.hours ?? 0),
-          description: (item.description ?? '').toString(),
-          createdAt: item.createdAt ? new Date(item.createdAt) : new Date(),
-        }));
-    } catch {
-      return [];
-    }
+  private async getClientById(id: number): Promise<ClientLookupRow | null> {
+    const { data: row, error } = await this.supabase
+      .from('clients')
+      .select('id, name, accent_color, is_active')
+      .eq('id', id)
+      .maybeSingle<ClientLookupRow>();
+    throwIfError(error, 'Failed to load client.');
+    return row ?? null;
   }
 
-  private writeEntries(entries: TimeEntryRecord[]): void {
-    localStorage.setItem(TIME_ENTRIES_KEY, JSON.stringify(entries));
+  private async getProjectById(id: number): Promise<ProjectLookupRow | null> {
+    const { data: row, error } = await this.supabase
+      .from('projects')
+      .select('id, client_id, code, name, use_orders, is_active')
+      .eq('id', id)
+      .maybeSingle<ProjectLookupRow>();
+    throwIfError(error, 'Failed to load project.');
+    return row ?? null;
   }
 
-  private readClients(): ClientRecord[] {
-    const raw = localStorage.getItem(CLIENTS_KEY);
-    if (!raw) {
-      return [];
-    }
-
-    try {
-      return JSON.parse(raw) as ClientRecord[];
-    } catch {
-      return [];
-    }
+  private async getOrderById(id: number): Promise<OrderLookupRow | null> {
+    const { data: row, error } = await this.supabase
+      .from('orders')
+      .select('id, project_id, code, is_active')
+      .eq('id', id)
+      .maybeSingle<OrderLookupRow>();
+    throwIfError(error, 'Failed to load order.');
+    return row ?? null;
   }
 
-  private readProjects(): ProjectRecord[] {
-    const raw = localStorage.getItem(PROJECTS_KEY);
-    if (!raw) {
-      return [];
-    }
-
-    try {
-      return JSON.parse(raw) as ProjectRecord[];
-    } catch {
-      return [];
-    }
+  private async getClientsById(): Promise<Map<number, ClientLookupRow>> {
+    const { data: rows, error } = await this.supabase
+      .from('clients')
+      .select('id, name, accent_color, is_active')
+      .returns<ClientLookupRow[]>();
+    throwIfError(error, 'Failed to load clients.');
+    return new Map((rows ?? []).map((row) => [row.id, row]));
   }
 
-  private readOrders(): OrderRecord[] {
-    const raw = localStorage.getItem(ORDERS_KEY);
-    if (!raw) {
-      return [];
-    }
-
-    try {
-      return JSON.parse(raw) as OrderRecord[];
-    } catch {
-      return [];
-    }
+  private async getProjectsById(): Promise<Map<number, ProjectLookupRow>> {
+    const { data: rows, error } = await this.supabase
+      .from('projects')
+      .select('id, client_id, code, name, use_orders, is_active')
+      .returns<ProjectLookupRow[]>();
+    throwIfError(error, 'Failed to load projects.');
+    return new Map((rows ?? []).map((row) => [row.id, row]));
   }
+
+  private async getOrdersById(): Promise<Map<number, OrderLookupRow>> {
+    const { data: rows, error } = await this.supabase
+      .from('orders')
+      .select('id, project_id, code, is_active')
+      .returns<OrderLookupRow[]>();
+    throwIfError(error, 'Failed to load orders.');
+    return new Map((rows ?? []).map((row) => [row.id, row]));
+  }
+}
+
+function isoDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }

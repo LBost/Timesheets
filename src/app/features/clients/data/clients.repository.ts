@@ -1,59 +1,90 @@
-import { Injectable } from '@angular/core';
-import { ClientCreateInput, ClientUpdateInput } from '../models/client.model';
+import { Injectable, inject } from '@angular/core';
+import { SupabaseClient } from '@supabase/supabase-js';
+
 import {
-  ClientRecord,
+  SUPABASE_CLIENT,
+  requireCurrentUserId,
+} from '../../../core/supabase/supabase.client';
+import {
+  isUniqueViolation,
+  throwIfError,
+} from '../../../core/supabase/postgrest.util';
+import { ClientCreateInput, ClientUpdateInput } from '../models/client.model';
+import { ClientVM } from '../models/client.vm';
+import {
+  ClientRow,
+  fromClientRow,
   toClientInsertValues,
   toClientModel,
   toClientUpdateValues,
   toClientVM,
 } from './client.mapper';
-import { ClientVM } from '../models/client.vm';
-
-type ProjectRecord = {
-  id: number;
-  clientId: number;
-  isActive?: boolean;
-};
 
 export type DeleteClientResult = {
   mode: 'deleted' | 'archived';
   client: ClientVM | null;
 };
 
-const CLIENTS_KEY = 'timesheets.clients';
-const PROJECTS_KEY = 'timesheets.projects';
+const CLIENT_SELECT =
+  'id, name, email, phone, accentColor:accent_color, isActive:is_active, createdAt:created_at';
 
 @Injectable({ providedIn: 'root' })
 export class ClientsRepository {
+  private readonly supabase: SupabaseClient = inject(SUPABASE_CLIENT);
+
   async listClients(): Promise<ClientVM[]> {
-    return this.getClientVMs();
+    const { data: rows, error } = await this.supabase
+      .from('clients')
+      .select(CLIENT_SELECT)
+      .order('name', { ascending: true })
+      .returns<ClientRow[]>();
+    throwIfError(error, 'Failed to load clients.');
+    if (!rows) {
+      return [];
+    }
+
+    const counts = await this.getProjectCountByClientId();
+    return rows.map((row) =>
+      toClientVM(toClientModel(fromClientRow(row)), counts.get(row.id) ?? 0),
+    );
   }
 
   async getClientById(id: number): Promise<ClientVM | null> {
-    return this.getClientVMs().then((clients) => clients.find((client) => client.id === id) ?? null);
+    const { data: row, error } = await this.supabase
+      .from('clients')
+      .select(CLIENT_SELECT)
+      .eq('id', id)
+      .maybeSingle<ClientRow>();
+    throwIfError(error, 'Failed to load client.');
+    if (!row) {
+      return null;
+    }
+
+    const counts = await this.getProjectCountByClientId(id);
+    return toClientVM(toClientModel(fromClientRow(row)), counts.get(row.id) ?? 0);
   }
 
   async createClient(input: ClientCreateInput): Promise<ClientVM> {
+    const userId = await requireCurrentUserId(this.supabase);
     const payload = toClientInsertValues(input);
-    const all = this.readClients();
-    const duplicate = all.some((client) => client.name.toLowerCase() === payload.name.toLowerCase());
-    if (duplicate) {
+    const { data: row, error } = await this.supabase
+      .from('clients')
+      .insert({
+        user_id: userId,
+        name: payload.name,
+        email: payload.email,
+        phone: payload.phone,
+        accent_color: payload.accentColor ?? null,
+        is_active: payload.isActive,
+      })
+      .select(CLIENT_SELECT)
+      .single<ClientRow>();
+
+    if (isUniqueViolation(error)) {
       throw new Error('A client with this name already exists.');
     }
-
-    const nextId = all.length === 0 ? 1 : Math.max(...all.map((client) => client.id)) + 1;
-    const inserted: ClientRecord = {
-      id: nextId,
-      name: payload.name,
-      email: payload.email,
-      phone: payload.phone,
-      accentColor: payload.accentColor ?? null,
-      isActive: payload.isActive,
-      createdAt: new Date(),
-    };
-    this.writeClients([...all, inserted]);
-
-    return (await this.getClientById(inserted.id)) as ClientVM;
+    throwIfError(error, 'Failed to create client.');
+    return toClientVM(toClientModel(fromClientRow(row!)), 0);
   }
 
   async updateClient(id: number, input: ClientUpdateInput): Promise<ClientVM | null> {
@@ -62,99 +93,91 @@ export class ClientsRepository {
       return this.getClientById(id);
     }
 
-    const all = this.readClients();
-    const current = all.find((client) => client.id === id);
-    if (!current) {
+    const updatePayload: Record<string, unknown> = {};
+    if (values.name !== undefined) updatePayload['name'] = values.name;
+    if (values.email !== undefined) updatePayload['email'] = values.email;
+    if (values.phone !== undefined) updatePayload['phone'] = values.phone;
+    if (values.accentColor !== undefined) updatePayload['accent_color'] = values.accentColor;
+    if (values.isActive !== undefined) updatePayload['is_active'] = values.isActive;
+
+    const { data: row, error } = await this.supabase
+      .from('clients')
+      .update(updatePayload)
+      .eq('id', id)
+      .select(CLIENT_SELECT)
+      .maybeSingle<ClientRow>();
+
+    if (isUniqueViolation(error)) {
+      throw new Error('A client with this name already exists.');
+    }
+    throwIfError(error, 'Failed to update client.');
+    if (!row) {
       return null;
     }
 
-    if (
-      values.name &&
-      all.some((client) => client.id !== id && client.name.toLowerCase() === values.name?.toLowerCase())
-    ) {
-      throw new Error('A client with this name already exists.');
-    }
-
-    this.writeClients(all.map((client) => (client.id === id ? { ...client, ...values } : client)));
-    return this.getClientById(id);
+    const counts = await this.getProjectCountByClientId(id);
+    return toClientVM(toClientModel(fromClientRow(row)), counts.get(row.id) ?? 0);
   }
 
   async archiveClient(id: number): Promise<ClientVM | null> {
-    const activeProjectCount = this.readProjects().filter(
-      (project) => project.clientId === id && project.isActive !== false
-    ).length;
-
-    if (activeProjectCount > 0) {
+    const { count, error: countError } = await this.supabase
+      .from('projects')
+      .select('id', { count: 'exact', head: true })
+      .eq('client_id', id)
+      .eq('is_active', true);
+    throwIfError(countError, 'Failed to inspect client projects.');
+    if ((count ?? 0) > 0) {
       throw new Error('Cannot archive a client with active projects.');
     }
 
-    this.writeClients(
-      this.readClients().map((client) => (client.id === id ? { ...client, isActive: false } : client))
-    );
-    return this.getClientById(id);
+    const { data: row, error } = await this.supabase
+      .from('clients')
+      .update({ is_active: false })
+      .eq('id', id)
+      .select(CLIENT_SELECT)
+      .maybeSingle<ClientRow>();
+    throwIfError(error, 'Failed to archive client.');
+    if (!row) {
+      return null;
+    }
+
+    const counts = await this.getProjectCountByClientId(id);
+    return toClientVM(toClientModel(fromClientRow(row)), counts.get(row.id) ?? 0);
   }
 
   async deleteClient(id: number): Promise<DeleteClientResult> {
-    const hasProjects = this.readProjects().some((project) => project.clientId === id);
-    if (hasProjects) {
+    const { count, error: countError } = await this.supabase
+      .from('projects')
+      .select('id', { count: 'exact', head: true })
+      .eq('client_id', id);
+    throwIfError(countError, 'Failed to inspect client projects.');
+
+    if ((count ?? 0) > 0) {
       const archived = await this.archiveClient(id);
       return { mode: 'archived', client: archived };
     }
 
-    const existing = this.readClients().some((client) => client.id === id);
-    if (!existing) {
-      return { mode: 'deleted', client: null };
-    }
-
-    this.writeClients(this.readClients().filter((client) => client.id !== id));
+    const { error } = await this.supabase.from('clients').delete().eq('id', id);
+    throwIfError(error, 'Failed to delete client.');
     return { mode: 'deleted', client: null };
   }
 
-  private async getClientVMs(): Promise<ClientVM[]> {
-    const projectCounts = this.readProjects().reduce<Map<number, number>>((accumulator, project) => {
-      const currentCount = accumulator.get(project.clientId) ?? 0;
-      accumulator.set(project.clientId, currentCount + 1);
-      return accumulator;
-    }, new Map<number, number>());
-
-    return this.readClients()
-      .map((client) => toClientVM(toClientModel(client), projectCounts.get(client.id) ?? 0))
-      .sort((left, right) => left.name.localeCompare(right.name));
-  }
-
-  private readClients(): ClientRecord[] {
-    const raw = localStorage.getItem(CLIENTS_KEY);
-    if (!raw) {
-      return [];
+  /**
+   * Group active project counts by `clientId`. Pass `clientId` to limit the
+   * scan when only one row is needed; otherwise compute totals for all rows.
+   */
+  private async getProjectCountByClientId(clientId?: number): Promise<Map<number, number>> {
+    let query = this.supabase.from('projects').select('client_id');
+    if (clientId !== undefined) {
+      query = query.eq('client_id', clientId);
     }
+    const { data: rows, error } = await query.returns<Array<{ client_id: number }>>();
+    throwIfError(error, 'Failed to load client project counts.');
 
-    try {
-      const parsed = JSON.parse(raw) as Array<Omit<ClientRecord, 'createdAt'> & { createdAt: string }>;
-      return parsed.map((item) => ({
-        ...item,
-        accentColor: item.accentColor ?? null,
-        isActive: item.isActive ?? true,
-        createdAt: new Date(item.createdAt),
-      }));
-    } catch {
-      return [];
+    const counts = new Map<number, number>();
+    for (const row of rows ?? []) {
+      counts.set(row.client_id, (counts.get(row.client_id) ?? 0) + 1);
     }
-  }
-
-  private writeClients(clientsToPersist: ClientRecord[]): void {
-    localStorage.setItem(CLIENTS_KEY, JSON.stringify(clientsToPersist));
-  }
-
-  private readProjects(): ProjectRecord[] {
-    const raw = localStorage.getItem(PROJECTS_KEY);
-    if (!raw) {
-      return [];
-    }
-
-    try {
-      return JSON.parse(raw) as ProjectRecord[];
-    } catch {
-      return [];
-    }
+    return counts;
   }
 }

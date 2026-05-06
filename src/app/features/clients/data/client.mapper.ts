@@ -12,6 +12,34 @@ export interface ClientRecord {
   createdAt: Date;
 }
 
+/**
+ * Raw Supabase row shape after using the `select` alias syntax in
+ * `clients.repository.ts`. All snake_case columns are aliased to camelCase
+ * client-side, so this matches `ClientRecord` except for the `createdAt`
+ * timestamp which is delivered as an ISO string.
+ */
+export interface ClientRow {
+  id: number;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  accentColor: string | null;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export function fromClientRow(row: ClientRow): ClientRecord {
+  return {
+    id: row.id,
+    name: row.name,
+    email: row.email ?? null,
+    phone: row.phone ?? null,
+    accentColor: row.accentColor ?? null,
+    isActive: row.isActive,
+    createdAt: new Date(row.createdAt),
+  };
+}
+
 export function normalizeOptionalText(value: string | null | undefined): string | null {
   const trimmed = value?.trim();
   return trimmed ? trimmed : null;

@@ -57,6 +57,22 @@ import { HlmSidebarTrigger } from '@spartan-ng/helm/sidebar';
         >
           <ng-icon name="lucideSettings" hlm class="size-4" aria-hidden="true" />
         </button>
+        @if (currentUserEmail()) {
+          <span class="hidden text-xs text-muted-foreground sm:inline">
+            {{ currentUserEmail() }}
+          </span>
+        }
+        <button
+          hlmBtn
+          type="button"
+          size="icon"
+          variant="ghost"
+          class="cursor-pointer"
+          aria-label="Sign out"
+          (click)="signOut.emit()"
+        >
+          <ng-icon name="lucideLogOut" hlm class="size-4" aria-hidden="true" />
+        </button>
       </div>
     </header>
   `,
@@ -65,5 +81,7 @@ import { HlmSidebarTrigger } from '@spartan-ng/helm/sidebar';
 export class ShellTopHeaderComponent {
   readonly themeIconName = input.required<'lucideSun' | 'lucideMoon' | 'lucideMonitor'>();
   readonly themeToggleAriaLabel = input.required<string>();
+  readonly currentUserEmail = input<string | null>(null);
   readonly themeToggle = output<void>();
+  readonly signOut = output<void>();
 }

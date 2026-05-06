@@ -13,6 +13,7 @@ import {
   lucideClock,
   lucideFolderKanban,
   lucideLayoutDashboard,
+  lucideLogOut,
   lucideMonitor,
   lucideMoon,
   lucideReceipt,
@@ -23,6 +24,7 @@ import {
 import { routes } from './app.routes';
 import { ThemeService } from './core/theme/theme.service';
 import { provideStore } from '@ngrx/store';
+import { provideSupabase } from './core/supabase/supabase.client';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -38,12 +40,14 @@ export const appConfig: ApplicationConfig = {
         lucideMoon,
         lucideMonitor,
         lucideBell,
-        lucideSettings
+        lucideSettings,
+        lucideLogOut
     }),
     provideRouter(routes),
     provideAppInitializer(() => {
         void inject(ThemeService);
     }),
-    provideStore()
+    provideStore(),
+    provideSupabase()
 ]
 };

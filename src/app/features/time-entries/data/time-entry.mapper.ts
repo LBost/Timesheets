@@ -12,6 +12,36 @@ export interface TimeEntryRecord {
   createdAt: Date;
 }
 
+/**
+ * Raw Supabase row shape using camelCase aliases set in
+ * `time-entries.repository.ts`. The `description` column is nullable in
+ * Postgres but the runtime model coerces it to an empty string.
+ * `createdAt` arrives as an ISO string.
+ */
+export interface TimeEntryRow {
+  id: number;
+  clientId: number;
+  projectId: number;
+  orderId: number | null;
+  date: string;
+  hours: number;
+  description: string | null;
+  createdAt: string;
+}
+
+export function fromTimeEntryRow(row: TimeEntryRow): TimeEntryRecord {
+  return {
+    id: row.id,
+    clientId: row.clientId,
+    projectId: row.projectId,
+    orderId: row.orderId ?? null,
+    date: row.date,
+    hours: Number(row.hours),
+    description: row.description ?? '',
+    createdAt: new Date(row.createdAt),
+  };
+}
+
 export function toTimeEntryModel(record: TimeEntryRecord): TimeEntryModel {
   return {
     id: record.id,

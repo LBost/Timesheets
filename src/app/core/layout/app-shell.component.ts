@@ -1,7 +1,8 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { Router, RouterOutlet } from '@angular/router';
 import { ThemeService } from '../theme/theme.service';
 import { ToastService } from '../feedback/toast.service';
+import { AuthService } from '../../features/auth/data/auth.service';
 import { APP_NAVIGATION, APP_NAVIGATION_FOOTER } from './navigation.config';
 import { HlmCollapsibleImports } from '@spartan-ng/helm/collapsible';
 import { ShellAppFooterComponent } from './components/shell-app-footer.component';
@@ -33,6 +34,8 @@ export class AppShellComponent {
   protected readonly navFooterItems = APP_NAVIGATION_FOOTER;
   protected readonly theme = inject(ThemeService);
   protected readonly toast = inject(ToastService);
+  protected readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
 
   protected themeIconName(): 'lucideSun' | 'lucideMoon' | 'lucideMonitor' {
     switch (this.theme.mode()) {
@@ -47,5 +50,13 @@ export class AppShellComponent {
 
   protected themeToggleAriaLabel(): string {
     return `Color theme: ${this.theme.mode()}. Activate to use ${this.theme.peekNextMode()} theme.`;
+  }
+
+  protected async handleSignOut(): Promise<void> {
+    try {
+      await this.auth.signOut();
+    } finally {
+      await this.router.navigateByUrl('/login');
+    }
   }
 }

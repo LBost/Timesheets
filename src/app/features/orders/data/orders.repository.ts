@@ -1,58 +1,113 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
+import { SupabaseClient } from '@supabase/supabase-js';
+
+import {
+  SUPABASE_CLIENT,
+  requireCurrentUserId,
+} from '../../../core/supabase/supabase.client';
+import {
+  isUniqueViolation,
+  throwIfError,
+} from '../../../core/supabase/postgrest.util';
 import { OrderCreateInput, OrderUpdateInput } from '../models/order.model';
 import { OrderVM } from '../models/order.vm';
 import {
-  OrderRecord,
+  OrderRow,
+  fromOrderRow,
   toOrderInsertValues,
   toOrderModel,
   toOrderUpdateValues,
   toOrderVM,
 } from './order.mapper';
 
-type ProjectRecord = {
-  id: number;
-  code: string;
-  name: string;
-  useOrders?: boolean;
-  isActive: boolean;
-};
-
-type TimeEntryRecord = {
-  id: number;
-  orderId?: number;
-};
-
-const ORDERS_KEY = 'timesheets.orders';
-const PROJECTS_KEY = 'timesheets.projects';
-const TIME_ENTRIES_KEY = 'timesheets.timeEntries';
+const ORDER_SELECT =
+  'id, code, title, projectId:project_id, isActive:is_active, createdAt:created_at';
 
 @Injectable({ providedIn: 'root' })
 export class OrdersRepository {
+  private readonly supabase: SupabaseClient = inject(SUPABASE_CLIENT);
+
   async listOrders(): Promise<OrderVM[]> {
-    return this.getOrderVMs();
+    const { data: rows, error } = await this.supabase
+      .from('orders')
+      .select(ORDER_SELECT)
+      .order('code', { ascending: true })
+      .returns<OrderRow[]>();
+    throwIfError(error, 'Failed to load orders.');
+    if (!rows) {
+      return [];
+    }
+
+    const [projectsById, entryCounts] = await Promise.all([
+      this.getProjectSummariesById(),
+      this.getTimeEntryCountByOrderId(),
+    ]);
+
+    return rows.map((row) => {
+      const project = projectsById.get(row.projectId);
+      return toOrderVM(
+        toOrderModel(fromOrderRow(row)),
+        project?.code ?? 'UNKNOWN',
+        project?.name ?? 'Unknown project',
+        entryCounts.get(row.id) ?? 0,
+      );
+    });
   }
 
   async getOrderById(id: number): Promise<OrderVM | null> {
-    return this.getOrderVMs().then((orders) => orders.find((order) => order.id === id) ?? null);
+    const { data: row, error } = await this.supabase
+      .from('orders')
+      .select(ORDER_SELECT)
+      .eq('id', id)
+      .maybeSingle<OrderRow>();
+    throwIfError(error, 'Failed to load order.');
+    if (!row) {
+      return null;
+    }
+
+    const [projectsById, entryCounts] = await Promise.all([
+      this.getProjectSummariesById(row.projectId),
+      this.getTimeEntryCountByOrderId(id),
+    ]);
+    const project = projectsById.get(row.projectId);
+    return toOrderVM(
+      toOrderModel(fromOrderRow(row)),
+      project?.code ?? 'UNKNOWN',
+      project?.name ?? 'Unknown project',
+      entryCounts.get(row.id) ?? 0,
+    );
   }
 
   async createOrder(input: OrderCreateInput): Promise<OrderVM> {
+    const userId = await requireCurrentUserId(this.supabase);
     const payload = toOrderInsertValues(input);
-    const all = this.readOrders();
-    this.ensureProjectSupportsOrders(payload.projectId);
-    this.ensureUniqueProjectCode(all, payload.projectId, payload.code);
+    await this.ensureProjectSupportsOrders(payload.projectId);
 
-    const nextId = all.length === 0 ? 1 : Math.max(...all.map((order) => order.id)) + 1;
-    const created: OrderRecord = {
-      id: nextId,
-      code: payload.code,
-      title: payload.title,
-      projectId: payload.projectId,
-      isActive: payload.isActive,
-      createdAt: new Date(),
-    };
-    this.writeOrders([...all, created]);
-    return (await this.getOrderById(created.id)) as OrderVM;
+    const { data: row, error } = await this.supabase
+      .from('orders')
+      .insert({
+        user_id: userId,
+        code: payload.code,
+        title: payload.title,
+        project_id: payload.projectId,
+        is_active: payload.isActive,
+      })
+      .select(ORDER_SELECT)
+      .single<OrderRow>();
+
+    if (isUniqueViolation(error)) {
+      throw new Error('An order with this code already exists for the selected project.');
+    }
+    throwIfError(error, 'Failed to create order.');
+
+    const projectsById = await this.getProjectSummariesById(row!.projectId);
+    const project = projectsById.get(row!.projectId);
+    return toOrderVM(
+      toOrderModel(fromOrderRow(row!)),
+      project?.code ?? 'UNKNOWN',
+      project?.name ?? 'Unknown project',
+      0,
+    );
   }
 
   async updateOrder(id: number, input: OrderUpdateInput): Promise<OrderVM | null> {
@@ -61,125 +116,134 @@ export class OrdersRepository {
       return this.getOrderById(id);
     }
 
-    const all = this.readOrders();
-    const current = all.find((order) => order.id === id);
-    if (!current) {
+    if (values.projectId !== undefined) {
+      await this.ensureProjectSupportsOrders(values.projectId);
+    }
+
+    const updatePayload: Record<string, unknown> = {};
+    if (values.code !== undefined) updatePayload['code'] = values.code;
+    if (values.title !== undefined) updatePayload['title'] = values.title;
+    if (values.projectId !== undefined) updatePayload['project_id'] = values.projectId;
+    if (values.isActive !== undefined) updatePayload['is_active'] = values.isActive;
+
+    const { data: row, error } = await this.supabase
+      .from('orders')
+      .update(updatePayload)
+      .eq('id', id)
+      .select(ORDER_SELECT)
+      .maybeSingle<OrderRow>();
+
+    if (isUniqueViolation(error)) {
+      throw new Error('An order with this code already exists for the selected project.');
+    }
+    throwIfError(error, 'Failed to update order.');
+    if (!row) {
       return null;
     }
 
-    const candidateProjectId = values.projectId ?? current.projectId;
-    const candidateCode = values.code ?? current.code;
-    this.ensureProjectSupportsOrders(candidateProjectId);
-    this.ensureUniqueProjectCode(all.filter((order) => order.id !== id), candidateProjectId, candidateCode);
-
-    this.writeOrders(all.map((order) => (order.id === id ? { ...order, ...values } : order)));
-    return this.getOrderById(id);
+    const [projectsById, entryCounts] = await Promise.all([
+      this.getProjectSummariesById(row.projectId),
+      this.getTimeEntryCountByOrderId(id),
+    ]);
+    const project = projectsById.get(row.projectId);
+    return toOrderVM(
+      toOrderModel(fromOrderRow(row)),
+      project?.code ?? 'UNKNOWN',
+      project?.name ?? 'Unknown project',
+      entryCounts.get(row.id) ?? 0,
+    );
   }
 
   async archiveOrder(id: number): Promise<OrderVM | null> {
-    this.writeOrders(this.readOrders().map((order) => (order.id === id ? { ...order, isActive: false } : order)));
-    return this.getOrderById(id);
+    const { data: row, error } = await this.supabase
+      .from('orders')
+      .update({ is_active: false })
+      .eq('id', id)
+      .select(ORDER_SELECT)
+      .maybeSingle<OrderRow>();
+    throwIfError(error, 'Failed to archive order.');
+    if (!row) {
+      return null;
+    }
+
+    const [projectsById, entryCounts] = await Promise.all([
+      this.getProjectSummariesById(row.projectId),
+      this.getTimeEntryCountByOrderId(id),
+    ]);
+    const project = projectsById.get(row.projectId);
+    return toOrderVM(
+      toOrderModel(fromOrderRow(row)),
+      project?.code ?? 'UNKNOWN',
+      project?.name ?? 'Unknown project',
+      entryCounts.get(row.id) ?? 0,
+    );
   }
 
   async deleteOrder(id: number): Promise<boolean> {
-    const existing = this.readOrders().some((order) => order.id === id);
-    if (!existing) {
+    const { error: existenceError, data: existingRow } = await this.supabase
+      .from('orders')
+      .select('id')
+      .eq('id', id)
+      .maybeSingle<{ id: number }>();
+    throwIfError(existenceError, 'Failed to verify order.');
+    if (!existingRow) {
       return false;
     }
 
-    this.writeOrders(this.readOrders().filter((order) => order.id !== id));
+    const { error } = await this.supabase.from('orders').delete().eq('id', id);
+    throwIfError(error, 'Failed to delete order.');
     return true;
   }
 
-  private async getOrderVMs(): Promise<OrderVM[]> {
-    const projectById = new Map(this.readProjects().map((project) => [project.id, project]));
-    const timeEntryCountByOrderId = this.readTimeEntries().reduce<Map<number, number>>((acc, entry) => {
-      if (typeof entry.orderId === 'number') {
-        acc.set(entry.orderId, (acc.get(entry.orderId) ?? 0) + 1);
-      }
-      return acc;
-    }, new Map<number, number>());
-
-    return this.readOrders()
-      .map((order) => {
-        const project = projectById.get(order.projectId);
-        return toOrderVM(
-          toOrderModel(order),
-          project?.code ?? 'UNKNOWN',
-          project?.name ?? 'Unknown project',
-          timeEntryCountByOrderId.get(order.id) ?? 0
-        );
-      })
-      .sort((left, right) => left.code.localeCompare(right.code));
-  }
-
-  private ensureProjectSupportsOrders(projectId: number): void {
-    const project = this.readProjects().find((item) => item.id === projectId);
-    if (!project) {
+  private async ensureProjectSupportsOrders(projectId: number): Promise<void> {
+    const { data: row, error } = await this.supabase
+      .from('projects')
+      .select('id, use_orders, is_active')
+      .eq('id', projectId)
+      .maybeSingle<{ id: number; use_orders: boolean; is_active: boolean }>();
+    throwIfError(error, 'Failed to verify project.');
+    if (!row) {
       throw new Error('Selected project does not exist.');
     }
-    if (!project.useOrders) {
+    if (!row.use_orders) {
       throw new Error('Selected project does not use orders.');
     }
-    if (project.isActive === false) {
+    if (row.is_active === false) {
       throw new Error('Selected project is inactive.');
     }
   }
 
-  private ensureUniqueProjectCode(orders: OrderRecord[], projectId: number, code: string): void {
-    const duplicate = orders.some(
-      (order) => order.projectId === projectId && order.code.toUpperCase() === code.toUpperCase()
-    );
-    if (duplicate) {
-      throw new Error('An order with this code already exists for the selected project.');
+  private async getProjectSummariesById(
+    projectId?: number,
+  ): Promise<Map<number, { code: string; name: string }>> {
+    let query = this.supabase.from('projects').select('id, code, name');
+    if (projectId !== undefined) {
+      query = query.eq('id', projectId);
     }
+    const { data: rows, error } = await query.returns<
+      Array<{ id: number; code: string; name: string }>
+    >();
+    throwIfError(error, 'Failed to load projects.');
+
+    const map = new Map<number, { code: string; name: string }>();
+    for (const row of rows ?? []) {
+      map.set(row.id, { code: row.code, name: row.name });
+    }
+    return map;
   }
 
-  private readOrders(): OrderRecord[] {
-    const raw = localStorage.getItem(ORDERS_KEY);
-    if (!raw) {
-      return [];
+  private async getTimeEntryCountByOrderId(orderId?: number): Promise<Map<number, number>> {
+    let query = this.supabase.from('time_entries').select('order_id').not('order_id', 'is', null);
+    if (orderId !== undefined) {
+      query = query.eq('order_id', orderId);
     }
+    const { data: rows, error } = await query.returns<Array<{ order_id: number }>>();
+    throwIfError(error, 'Failed to load order time entry counts.');
 
-    try {
-      const parsed = JSON.parse(raw) as Array<Omit<OrderRecord, 'createdAt'> & { createdAt: string }>;
-      return parsed.map((item) => ({
-        ...item,
-        isActive: item.isActive ?? true,
-        createdAt: new Date(item.createdAt),
-      }));
-    } catch {
-      return [];
+    const counts = new Map<number, number>();
+    for (const row of rows ?? []) {
+      counts.set(row.order_id, (counts.get(row.order_id) ?? 0) + 1);
     }
-  }
-
-  private writeOrders(orders: OrderRecord[]): void {
-    localStorage.setItem(ORDERS_KEY, JSON.stringify(orders));
-  }
-
-  private readProjects(): ProjectRecord[] {
-    const raw = localStorage.getItem(PROJECTS_KEY);
-    if (!raw) {
-      return [];
-    }
-
-    try {
-      return JSON.parse(raw) as ProjectRecord[];
-    } catch {
-      return [];
-    }
-  }
-
-  private readTimeEntries(): TimeEntryRecord[] {
-    const raw = localStorage.getItem(TIME_ENTRIES_KEY);
-    if (!raw) {
-      return [];
-    }
-
-    try {
-      return JSON.parse(raw) as TimeEntryRecord[];
-    } catch {
-      return [];
-    }
+    return counts;
   }
 }
