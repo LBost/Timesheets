@@ -8,20 +8,13 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { DatePipe } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
-import { HlmComboboxImports } from '@spartan-ng/helm/combobox';
-import { HlmContextMenuImports } from '@spartan-ng/helm/context-menu';
-import { HlmInputImports } from '@spartan-ng/helm/input';
 import { HlmSeparatorImports } from '@spartan-ng/helm/separator';
 import { HlmSheetImports } from '@spartan-ng/helm/sheet';
 import { HlmSkeletonImports } from '@spartan-ng/helm/skeleton';
-import { HlmTableImports } from '@spartan-ng/helm/table';
 import { ToastService } from '../../../core/feedback/toast.service';
-import { CrudSheetFooterComponent } from '../../../shared/components/crud-sheet-footer/crud-sheet-footer.component';
 import { FeatureHeaderActionsComponent } from '../../../shared/components/feature-header-actions/feature-header-actions.component';
-import { RowContextMenuComponent } from '../../../shared/components/row-context-menu/row-context-menu.component';
 import {
   CLIENT_ACCENT_PRESETS,
   normalizeClientAccentHex,
@@ -29,23 +22,20 @@ import {
 } from '../../../shared/components/client-accent/client-accent.util';
 import { ClientsStore } from '../state/clients.store';
 import { ClientCreateInput, ClientUpdateInput } from '../models/client.model';
+import { ClientsSheetFormComponent } from './components/clients-sheet-form.component';
+import { ClientsTableComponent } from './components/clients-table.component';
 
 @Component({
   selector: 'app-clients-page',
   imports: [
     ReactiveFormsModule,
-    DatePipe,
     HlmButtonImports,
-    HlmComboboxImports,
-    HlmContextMenuImports,
-    HlmInputImports,
     HlmSeparatorImports,
     HlmSheetImports,
     HlmSkeletonImports,
-    HlmTableImports,
     FeatureHeaderActionsComponent,
-    CrudSheetFooterComponent,
-    RowContextMenuComponent,
+    ClientsSheetFormComponent,
+    ClientsTableComponent,
   ],
   template: `
     <section class="mx-auto flex w-full max-w-6xl flex-col gap-6">
@@ -62,124 +52,25 @@ import { ClientCreateInput, ClientUpdateInput } from '../models/client.model';
             <div hlmSheetHeader>
               <h2 hlmSheetTitle>{{ isEditing() ? 'Edit client' : 'Add client' }}</h2>
             </div>
-            <form
-              class="flex h-full flex-col gap-4 p-4"
-              [formGroup]="clientForm"
-              (ngSubmit)="submitClient()"
-            >
-              <label class="grid gap-1 text-sm">
-                <span>Name *</span>
-                <input hlmInput type="text" formControlName="name" placeholder="Braggel & Co. BV" />
-              </label>
-
-              <label class="grid gap-1 text-sm">
-                <span>Email</span>
-                <input
-                  hlmInput
-                  type="email"
-                  formControlName="email"
-                  placeholder="contact@braggel.nl"
-                />
-              </label>
-
-              <label class="grid gap-1 text-sm">
-                <span>Phone</span>
-                <input hlmInput type="text" formControlName="phone" placeholder="+31 6 12345678" />
-              </label>
-
-              <div class="grid gap-2 text-sm">
-                <span>Calendar accent</span>
-                <p class="text-xs text-muted-foreground">
-                  Used on the time entries calendar. Choose a preset, the color picker, or type a
-                  hex value.
-                </p>
-                <div class="flex flex-wrap gap-2">
-                  @for (hex of accentPresets; track hex) {
-                    <button
-                      type="button"
-                      class="size-9 rounded-md border-2 shadow-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
-                      [class.border-foreground]="clientForm.controls.accentColor.value === hex"
-                      [class.border-transparent]="clientForm.controls.accentColor.value !== hex"
-                      [style.background-color]="hex"
-                      [attr.aria-label]="'Accent ' + hex"
-                      [attr.aria-pressed]="clientForm.controls.accentColor.value === hex"
-                      (click)="selectAccentPreset(hex)"
-                    ></button>
-                  }
-                </div>
-                <div class="grid gap-1">
-                  <span class="text-xs text-muted-foreground">Custom</span>
-                  <div class="flex flex-wrap items-center gap-2">
-                    <input
-                      type="color"
-                      class="h-9 w-14 cursor-pointer rounded border border-border bg-transparent p-0.5"
-                      [value]="accentColorPickerSyncValue()"
-                      (input)="onAccentColorPicker($event)"
-                    />
-                    <input
-                      hlmInput
-                      type="text"
-                      class="min-w-0 flex-1 font-mono text-sm"
-                      formControlName="accentColor"
-                      placeholder="#6366f1"
-                      maxlength="7"
-                      autocomplete="off"
-                    />
-                    <button
-                      hlmBtn
-                      variant="outline"
-                      size="sm"
-                      type="button"
-                      (click)="clearAccentColor()"
-                    >
-                      Clear
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <label class="grid gap-1 text-sm">
-                <span>Status</span>
-                <div
-                  hlmCombobox
-                  [value]="selectedStatusOption()"
-                  [itemToString]="statusItemToLabel"
-                  [isItemEqualToValue]="isSameStatusOption"
-                  (valueChange)="onStatusValueChange($event)"
-                >
-                  <hlm-combobox-trigger class="w-full justify-between">
-                    <span>{{ selectedStatusOption()?.label ?? 'Select status' }}</span>
-                  </hlm-combobox-trigger>
-                  <ng-template hlmComboboxPortal>
-                    <div hlmComboboxContent>
-                      <div hlmComboboxList>
-                        @for (option of statusOptions; track option.label) {
-                          <hlm-combobox-item [value]="option">{{ option.label }}</hlm-combobox-item>
-                        }
-                      </div>
-                    </div>
-                  </ng-template>
-                </div>
-              </label>
-
-              @if (nameControl.touched && nameControl.invalid) {
-                <p class="text-sm text-destructive">Name is required (max 120 chars).</p>
-              }
-              @if (emailControl.touched && emailControl.invalid) {
-                <p class="text-sm text-destructive">Email format is invalid.</p>
-              }
-
-              <app-crud-sheet-footer
-                [isEditing]="isEditing()"
-                [isLoading]="store.isLoading()"
-                [isValid]="clientForm.valid"
-                createLabel="Create client"
-                updateLabel="Save changes"
-                (clearRequested)="resetForm()"
-                (cancelRequested)="cancelSheet()"
-              />
-              <button #sheetCloseButton class="hidden" hlmSheetClose type="button"></button>
-            </form>
+            <app-clients-sheet-form
+              [form]="clientForm"
+              [isEditing]="isEditing()"
+              [isLoading]="store.isLoading()"
+              [accentPresets]="accentPresets"
+              [accentPickerValue]="accentColorPickerSyncValue()"
+              [statusOptions]="statusOptions"
+              [selectedStatusOption]="selectedStatusOption()"
+              [statusItemToLabel]="statusItemToLabel"
+              [isSameStatusOption]="isSameStatusOption"
+              (submitted)="submitClient()"
+              (statusChanged)="onStatusValueChange($event)"
+              (accentPresetSelected)="selectAccentPreset($event)"
+              (accentPickerChanged)="onAccentColorPicker($event)"
+              (accentClearRequested)="clearAccentColor()"
+              (clearRequested)="resetForm()"
+              (cancelRequested)="cancelSheet()"
+            />
+            <button #sheetCloseButton class="hidden" hlmSheetClose type="button"></button>
           </hlm-sheet-content>
         </ng-template>
       </hlm-sheet>
@@ -201,61 +92,14 @@ import { ClientCreateInput, ClientUpdateInput } from '../models/client.model';
         </div>
       }
 
-      <div hlmTableContainer class="rounded-lg border border-border">
-        <table hlmTable>
-          <thead hlmTableHeader>
-            <tr hlmTableRow>
-              <th hlmTableHead>Client</th>
-              <th hlmTableHead class="w-12 text-center">Accent</th>
-              <th hlmTableHead>Contact</th>
-              <th hlmTableHead>Projects</th>
-              <th hlmTableHead>Status</th>
-            </tr>
-          </thead>
-          <tbody hlmTableBody>
-            @for (client of store.clients(); track client.id) {
-              <tr
-                hlmTableRow
-                [hlmContextMenuTrigger]="rowMenu"
-                [hlmContextMenuTriggerData]="{ clientId: client.id }"
-              >
-                <td hlmTableCell>
-                  <div class="font-medium">{{ client.name }}</div>
-                  <div class="text-xs text-muted-foreground">
-                    Created {{ client.createdAt | date: 'mediumDate' }}
-                  </div>
-                </td>
-                <td hlmTableCell class="text-center">
-                  <span
-                    class="inline-block size-4 rounded-full ring-1 ring-border"
-                    [style.background-color]="clientAccentSwatch(client.accentColor, client.id)"
-                    aria-hidden="true"
-                  ></span>
-                </td>
-                <td hlmTableCell class="text-muted-foreground">
-                  <div>{{ client.email || 'No email' }}</div>
-                  <div>{{ client.phone || 'No phone' }}</div>
-                </td>
-                <td hlmTableCell>{{ client.projectCount }}</td>
-                <td hlmTableCell>{{ client.isActive ? 'Active' : 'Inactive' }}</td>
-              </tr>
-            } @empty {
-              <tr hlmTableRow>
-                <td hlmTableCell class="py-4 text-muted-foreground" colspan="5">No clients yet.</td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-      <ng-template #rowMenu let-clientId="clientId">
-        <app-row-context-menu
-          [entityId]="clientId"
-          (addRequested)="openAddMode()"
-          (editRequested)="editClient($event)"
-          (deleteRequested)="deleteClient($event)"
-          (archiveRequested)="archiveClient($event)"
-        />
-      </ng-template>
+      <app-clients-table
+        [clients]="store.clients()"
+        [accentSwatchResolver]="clientAccentSwatch"
+        (addRequested)="openAddMode()"
+        (editRequested)="editClient($event)"
+        (deleteRequested)="deleteClient($event)"
+        (archiveRequested)="archiveClient($event)"
+      />
     </section>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
