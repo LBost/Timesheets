@@ -27,8 +27,10 @@ alwaysApply: true
 
 - Prefer Tailwind utilities in templates for layout/spacing/visual tweaks.
 - Do not introduce plain CSS for routine component styling when Tailwind utilities are sufficient.
-- Use Spartan UI components/wrappers before introducing custom HTML controls.
-  - Example: use Spartan combobox/sheet/context-menu/table/button/input wrappers over native custom-built alternatives.
+- Prefer `@spartan-ng/helm` wrappers/primitives and `@ng-icons/*` icons over native HTML elements whenever an equivalent exists.
+- Do not introduce native controls (`<select>`, raw menu patterns, ad-hoc table controls, custom inline SVG icons, etc.) when Spartan + ng-icons can cover the same interaction.
+- If no clear Spartan equivalent exists for the needed behavior, stop and ask the user for direction before implementing a native/custom fallback.
+  - Example: use Spartan combobox/sheet/context-menu/table/button/input wrappers and ng-icons icon sets instead of custom-built alternatives.
 
 ## Shared component boundary
 
