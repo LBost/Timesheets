@@ -36,10 +36,12 @@ import { NavigationItem, NavigationSection } from '../navigation.config';
     <hlm-sidebar
       collapsible="icon"
       aria-label="Primary navigation"
-      sidebarContainerClass="border-sidebar-border/40"
+      sidebarContainerClass="border-sidebar-border"
     >
       <div hlmSidebarHeader>
-        <div class="px-2 text-sm font-bold tracking-wide text-sidebar-primary group-data-[collapsible=icon]:hidden">
+        <div
+          class="px-2 text-sm font-bold tracking-wide text-sidebar-primary group-data-[collapsible=icon]:hidden"
+        >
           Timesheets
         </div>
       </div>
@@ -62,7 +64,11 @@ import { NavigationItem, NavigationSection } from '../navigation.config';
                         [isActive]="activeRla.isActive"
                         [routerLinkActiveOptions]="{ exact: item.route === '/' }"
                       >
-                        <ng-icon class="shrink-0 text-current" [name]="item.icon" aria-hidden="true" />
+                        <ng-icon
+                          class="shrink-0 text-current"
+                          [name]="item.icon"
+                          aria-hidden="true"
+                        />
                         <span>{{ item.label }}</span>
                       </a>
                     </li>
@@ -73,10 +79,16 @@ import { NavigationItem, NavigationSection } from '../navigation.config';
                         disabled
                         [tooltip]="item.comingSoon ? item.label + ' (coming soon)' : item.label"
                       >
-                        <ng-icon class="shrink-0 text-current" [name]="item.icon" aria-hidden="true" />
+                        <ng-icon
+                          class="shrink-0 text-current"
+                          [name]="item.icon"
+                          aria-hidden="true"
+                        />
                         <span>{{ item.label }}</span>
                         @if (item.comingSoon) {
-                          <span class="ms-auto text-[10px] font-medium uppercase tracking-wide text-sidebar-foreground/60">
+                          <span
+                            class="ms-auto text-[10px] font-medium uppercase tracking-wide text-sidebar-foreground/60"
+                          >
                             Soon
                           </span>
                         }
@@ -117,7 +129,9 @@ import { NavigationItem, NavigationSection } from '../navigation.config';
                   <ng-icon class="shrink-0 text-current" [name]="item.icon" aria-hidden="true" />
                   <span>{{ item.label }}</span>
                   @if (item.comingSoon) {
-                    <span class="ms-auto text-[10px] font-medium uppercase tracking-wide text-sidebar-foreground/60">
+                    <span
+                      class="ms-auto text-[10px] font-medium uppercase tracking-wide text-sidebar-foreground/60"
+                    >
                       Soon
                     </span>
                   }
