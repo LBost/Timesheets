@@ -1,49 +1,29 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import { NgIcon } from '@ng-icons/core';
+import { RouterOutlet } from '@angular/router';
 import { ThemeService } from '../theme/theme.service';
 import { ToastService } from '../feedback/toast.service';
 import { APP_NAVIGATION, APP_NAVIGATION_FOOTER } from './navigation.config';
-import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmCollapsibleImports } from '@spartan-ng/helm/collapsible';
+import { ShellAppFooterComponent } from './components/shell-app-footer.component';
+import { ShellSidebarNavComponent } from './components/shell-sidebar-nav.component';
+import { ShellTopHeaderComponent } from './components/shell-top-header.component';
+import { ShellToastComponent } from './components/shell-toast.component';
 import {
-  HlmSidebar,
-  HlmSidebarContent,
-  HlmSidebarFooter,
-  HlmSidebarGroup,
-  HlmSidebarGroupContent,
-  HlmSidebarGroupLabel,
-  HlmSidebarHeader,
   HlmSidebarInset,
-  HlmSidebarMenu,
-  HlmSidebarMenuButton,
-  HlmSidebarMenuItem,
-  HlmSidebarTrigger,
   HlmSidebarWrapper,
 } from '@spartan-ng/helm/sidebar';
 
 @Component({
   selector: 'app-shell',
   imports: [
-    RouterLink,
-    RouterLinkActive,
     RouterOutlet,
-    NgIcon,
-    HlmButtonImports,
-    HlmSidebar,
-    HlmSidebarContent,
-    HlmSidebarFooter,
-    HlmSidebarGroup,
-    HlmSidebarGroupContent,
-    HlmSidebarGroupLabel,
-    HlmSidebarHeader,
     HlmSidebarInset,
-    HlmSidebarMenu,
-    HlmSidebarMenuButton,
-    HlmSidebarMenuItem,
-    HlmSidebarTrigger,
     HlmSidebarWrapper,
     HlmCollapsibleImports,
+    ShellSidebarNavComponent,
+    ShellAppFooterComponent,
+    ShellTopHeaderComponent,
+    ShellToastComponent,
   ],
   templateUrl: './app-shell.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
