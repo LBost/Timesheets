@@ -66,6 +66,9 @@
       ],
       "@spartan-ng/helm/dialog": [
         "./src/app/shared/ui/dialog/src/index.ts"
+      ],
+      "@spartan-ng/helm/collapsible": [
+        "./src/app/shared/ui/collapsible/src/index.ts"
       ]
     }
   },

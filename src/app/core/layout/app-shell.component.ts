@@ -5,6 +5,7 @@ import { ThemeService } from '../theme/theme.service';
 import { ToastService } from '../feedback/toast.service';
 import { APP_NAVIGATION } from './navigation.config';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
+import { HlmCollapsibleImports } from '@spartan-ng/helm/collapsible';
 import {
   HlmSidebar,
   HlmSidebarContent,
@@ -17,7 +18,7 @@ import {
   HlmSidebarMenuButton,
   HlmSidebarMenuItem,
   HlmSidebarTrigger,
-  HlmSidebarWrapper
+  HlmSidebarWrapper,
 } from '@spartan-ng/helm/sidebar';
 
 @Component({
@@ -39,7 +40,8 @@ import {
     HlmSidebarMenuButton,
     HlmSidebarMenuItem,
     HlmSidebarTrigger,
-    HlmSidebarWrapper
+    HlmSidebarWrapper,
+    HlmCollapsibleImports,
   ],
   templateUrl: './app-shell.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
