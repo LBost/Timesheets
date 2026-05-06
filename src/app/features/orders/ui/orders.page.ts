@@ -9,38 +9,28 @@ import {
   signal,
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { HlmButtonImports } from '@spartan-ng/helm/button';
-import { HlmComboboxImports } from '@spartan-ng/helm/combobox';
-import { HlmContextMenuImports } from '@spartan-ng/helm/context-menu';
-import { HlmInputImports } from '@spartan-ng/helm/input';
 import { HlmSeparatorImports } from '@spartan-ng/helm/separator';
 import { HlmSheetImports } from '@spartan-ng/helm/sheet';
-import { HlmSkeletonImports } from '@spartan-ng/helm/skeleton';
-import { HlmTableImports } from '@spartan-ng/helm/table';
 import { ToastService } from '../../../core/feedback/toast.service';
 import { activeLookup, selectionFromValueChange } from '../../../shared/components/combobox-selection/combobox-selection.util';
-import { CrudSheetFooterComponent } from '../../../shared/components/crud-sheet-footer/crud-sheet-footer.component';
 import { FeatureHeaderActionsComponent } from '../../../shared/components/feature-header-actions/feature-header-actions.component';
-import { RowContextMenuComponent } from '../../../shared/components/row-context-menu/row-context-menu.component';
 import { ProjectsRepository } from '../../projects/data/projects.repository';
 import { OrderCreateInput, OrderUpdateInput } from '../models/order.model';
 import { OrdersStore } from '../state/orders.store';
+import { OrderSheetFormComponent } from './components/order-sheet-form.component';
+import { OrdersStateMessagesComponent } from './components/orders-state-messages.component';
+import { OrdersTableComponent } from './components/orders-table.component';
 
 @Component({
   selector: 'app-orders-page',
   imports: [
     ReactiveFormsModule,
-    HlmButtonImports,
-    HlmComboboxImports,
-    HlmContextMenuImports,
-    HlmInputImports,
     HlmSeparatorImports,
     HlmSheetImports,
-    HlmSkeletonImports,
-    HlmTableImports,
     FeatureHeaderActionsComponent,
-    CrudSheetFooterComponent,
-    RowContextMenuComponent,
+    OrderSheetFormComponent,
+    OrdersStateMessagesComponent,
+    OrdersTableComponent,
   ],
   template: `
     <section class="mx-auto flex w-full max-w-6xl flex-col gap-6">
@@ -64,165 +54,43 @@ import { OrdersStore } from '../state/orders.store';
               <div hlmSheetHeader>
                 <h2 hlmSheetTitle>{{ isEditing() ? 'Edit order' : 'Add order' }}</h2>
               </div>
-              <form
-                class="flex h-full flex-col gap-4 p-4"
-                [formGroup]="orderForm"
-                (ngSubmit)="submitOrder()"
-                autocomplete="off"
-              >
-                <label class="grid gap-1 text-sm">
-                  <span>Order Nr *</span>
-                  <input hlmInput type="text" formControlName="code" placeholder="PO-2026-001" />
-                </label>
-
-                <label class="grid gap-1 text-sm">
-                  <span>Order Description *</span>
-                  <input
-                    hlmInput
-                    type="text"
-                    formControlName="title"
-                    placeholder="Q3 Retainer extension"
-                  />
-                </label>
-
-                <label class="grid gap-1 text-sm">
-                  <span>Project (useOrders enabled) *</span>
-                  <div
-                    hlmCombobox
-                    [value]="selectedProjectOption()"
-                    [search]="orderForm.controls.projectQuery.value ?? ''"
-                    [itemToString]="optionToLabel"
-                    [isItemEqualToValue]="isSameOption"
-                    (searchChange)="onProjectSearchChange($event)"
-                    (valueChange)="onProjectValueChange($event)"
-                  >
-                    <hlm-combobox-input placeholder="Select a project" />
-                    <ng-template hlmComboboxPortal>
-                      <div hlmComboboxContent>
-                        <div hlmComboboxList>
-                          @for (project of projectOptions(); track project.id) {
-                            <hlm-combobox-item [value]="project">{{
-                              project.label
-                            }}</hlm-combobox-item>
-                          }
-                          <div hlmComboboxEmpty>No matching projects found.</div>
-                        </div>
-                      </div>
-                    </ng-template>
-                  </div>
-                </label>
-
-                <label class="grid gap-1 text-sm">
-                  <span>Status</span>
-                  <div
-                    hlmCombobox
-                    [value]="selectedStatusOption()"
-                    [itemToString]="statusItemToLabel"
-                    [isItemEqualToValue]="isSameStatusOption"
-                    (valueChange)="onStatusValueChange($event)"
-                  >
-                    <hlm-combobox-trigger class="w-full justify-between">
-                      <span>{{ selectedStatusOption()?.label ?? 'Select status' }}</span>
-                    </hlm-combobox-trigger>
-                    <ng-template hlmComboboxPortal>
-                      <div hlmComboboxContent>
-                        <div hlmComboboxList>
-                          @for (option of statusOptions; track option.label) {
-                            <hlm-combobox-item [value]="option">{{
-                              option.label
-                            }}</hlm-combobox-item>
-                          }
-                        </div>
-                      </div>
-                    </ng-template>
-                  </div>
-                </label>
-
-                <app-crud-sheet-footer
-                  [isEditing]="isEditing()"
-                  [isLoading]="store.isLoading()"
-                  [isValid]="orderForm.valid && hasSelectedProject()"
-                  createLabel="Create order"
-                  updateLabel="Save changes"
-                  (clearRequested)="resetForm()"
-                  (cancelRequested)="cancelSheet()"
-                />
-                <button #sheetCloseButton class="hidden" hlmSheetClose type="button"></button>
-              </form>
+              <app-order-sheet-form
+                [form]="orderForm"
+                [isEditing]="isEditing()"
+                [isLoading]="store.isLoading()"
+                [isValid]="orderForm.valid && hasSelectedProject()"
+                [projectOptions]="projectOptions()"
+                [statusOptions]="statusOptions"
+                [selectedProjectOption]="selectedProjectOption()"
+                [selectedStatusOption]="selectedStatusOption()"
+                [optionToLabel]="optionToLabel"
+                [isSameOption]="isSameOption"
+                [statusItemToLabel]="statusItemToLabel"
+                [isSameStatusOption]="isSameStatusOption"
+                (submitted)="submitOrder()"
+                (projectSearchChanged)="onProjectSearchChange($event)"
+                (projectValueChanged)="onProjectValueChange($event)"
+                (statusValueChanged)="onStatusValueChange($event)"
+                (clearRequested)="resetForm()"
+                (cancelRequested)="cancelSheet()"
+              />
+              <button #sheetCloseButton class="hidden" hlmSheetClose type="button"></button>
             </hlm-sheet-content>
           </ng-template>
       </hlm-sheet>
       <div hlmSeparator></div>
-
-      @if (projectLookupError()) {
-        <p
-          class="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
-        >
-          {{ projectLookupError() }}
-        </p>
-      }
-
-      @if (store.error()) {
-        <p
-          class="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
-        >
-          {{ store.error() }}
-        </p>
-      }
-
-      @if (store.isLoading()) {
-        <div class="grid gap-2 rounded-lg border border-border p-4">
-          <div hlmSkeleton class="h-5 w-1/3"></div>
-          <div hlmSkeleton class="h-4 w-full"></div>
-          <div hlmSkeleton class="h-4 w-5/6"></div>
-        </div>
-      }
-
-      <div hlmTableContainer class="rounded-lg border border-border">
-        <table hlmTable>
-          <thead hlmTHead>
-            <tr hlmTr>
-              <th hlmTh>Order</th>
-              <th hlmTh>Project</th>
-              <th hlmTh>Status</th>
-              <th hlmTh>Entries</th>
-            </tr>
-          </thead>
-          <tbody hlmTBody>
-            @for (order of store.orders(); track order.id) {
-              <tr
-                hlmTr
-                [hlmContextMenuTrigger]="rowMenu"
-                [hlmContextMenuTriggerData]="{ orderId: order.id }"
-              >
-                <td hlmTd>
-                  <div class="font-medium">{{ order.code }}</div>
-                  <div class="text-xs text-muted-foreground">{{ order.title }}</div>
-                </td>
-                <td hlmTd>
-                  <div>{{ order.projectName }}</div>
-                  <div class="text-xs text-muted-foreground">{{ order.projectCode }}</div>
-                </td>
-                <td hlmTd>{{ order.isActive ? 'Active' : 'Inactive' }}</td>
-                <td hlmTd>{{ order.timeEntryCount }}</td>
-              </tr>
-            } @empty {
-              <tr hlmTr>
-                <td hlmTd colspan="4" class="text-muted-foreground">No orders yet.</td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-      <ng-template #rowMenu let-orderId="orderId">
-        <app-row-context-menu
-          [entityId]="orderId"
-          (addRequested)="openAddMode()"
-          (editRequested)="editOrder($event)"
-          (deleteRequested)="deleteOrder($event)"
-          (archiveRequested)="archiveOrder($event)"
-        />
-      </ng-template>
+      <app-orders-state-messages
+        [projectLookupError]="projectLookupError()"
+        [storeError]="store.error()"
+        [isLoading]="store.isLoading()"
+      />
+      <app-orders-table
+        [orders]="store.orders()"
+        (addRequested)="openAddMode()"
+        (editRequested)="editOrder($event)"
+        (deleteRequested)="deleteOrder($event)"
+        (archiveRequested)="archiveOrder($event)"
+      />
     </section>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
