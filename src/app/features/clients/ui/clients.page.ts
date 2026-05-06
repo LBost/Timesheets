@@ -84,7 +84,7 @@ import { ClientsTableComponent } from './components/clients-table.component';
         </p>
       }
 
-      @if (store.isLoading()) {
+      @if (showLoadingSkeleton()) {
         <div class="grid gap-2 rounded-lg border border-border p-4">
           <div hlmSkeleton class="h-5 w-1/3"></div>
           <div hlmSkeleton class="h-4 w-full"></div>
@@ -119,6 +119,10 @@ export class ClientsPage implements OnInit {
     { label: 'Active', value: true },
     { label: 'Inactive', value: false },
   ];
+  private readonly hasInitialLoadCompleted = signal(false);
+  protected readonly showLoadingSkeleton = computed(
+    () => !this.hasInitialLoadCompleted() && this.store.isLoading(),
+  );
 
   protected readonly clientForm = this.formBuilder.group({
     name: ['', [Validators.required, Validators.maxLength(120)]],
@@ -142,7 +146,11 @@ export class ClientsPage implements OnInit {
   }
 
   async ngOnInit(): Promise<void> {
-    await this.store.loadClients();
+    try {
+      await this.store.loadClients();
+    } finally {
+      this.hasInitialLoadCompleted.set(true);
+    }
   }
 
   protected async submitClient(): Promise<void> {

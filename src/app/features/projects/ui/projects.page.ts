@@ -81,7 +81,7 @@ import { ProjectsTableComponent } from './components/projects-table.component';
       <app-projects-feedback-state
         [clientLookupError]="clientLookupError()"
         [storeError]="store.error()"
-        [isLoading]="store.isLoading()"
+        [isLoading]="showLoadingSkeleton()"
       />
       <app-projects-table
         [projects]="store.projects()"
@@ -119,6 +119,10 @@ export class ProjectsPage implements OnInit {
   protected readonly clientOptions = signal<Array<{ id: number; label: string }>>([]);
   protected readonly clientLookupError = signal<string | null>(null);
   protected readonly selectedClientOption = signal<{ id: number; label: string } | null>(null);
+  private readonly hasInitialLoadCompleted = signal(false);
+  protected readonly showLoadingSkeleton = computed(
+    () => !this.hasInitialLoadCompleted() && this.store.isLoading(),
+  );
 
   protected readonly projectForm = this.formBuilder.group({
     name: ['', [Validators.required, Validators.maxLength(120)]],
@@ -134,15 +138,19 @@ export class ProjectsPage implements OnInit {
   private selectedClientId: number | null = null;
 
   async ngOnInit(): Promise<void> {
-    const clients = await this.clientsRepository.listClients();
-    this.clientOptions.set(
-      activeLookup(clients)
-        .map((client) => ({
-        id: client.id,
-        label: this.clientLabel(client.id, client.name),
-      }))
-    );
-    await this.store.loadProjects();
+    try {
+      const clients = await this.clientsRepository.listClients();
+      this.clientOptions.set(
+        activeLookup(clients)
+          .map((client) => ({
+          id: client.id,
+          label: this.clientLabel(client.id, client.name),
+        }))
+      );
+      await this.store.loadProjects();
+    } finally {
+      this.hasInitialLoadCompleted.set(true);
+    }
   }
 
   protected async submitProject(): Promise<void> {

@@ -88,7 +88,7 @@ type WeekDay = {
 
         <app-time-entries-month-summary [monthLabel]="periodLabel()" [monthTotalHours]="periodTotalHours()" />
 
-        @if (store.isLoading()) {
+        @if (showLoadingSkeleton()) {
           <div class="grid gap-2 rounded-lg border border-border p-4">
             <div hlmSkeleton class="h-5 w-1/4"></div>
             <div hlmSkeleton class="h-4 w-full"></div>
@@ -196,6 +196,10 @@ export class TimeEntriesPage implements OnInit {
   });
   protected readonly weekdayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   protected readonly viewMode = signal<'month' | 'week'>('month');
+  private readonly hasInitialLoadCompleted = signal(false);
+  protected readonly showLoadingSkeleton = computed(
+    () => !this.hasInitialLoadCompleted() && this.store.isLoading(),
+  );
   protected readonly selectedWeekStart = signal(this.startOfWeek(new Date()));
   protected readonly entriesForDateFn = (date: string) => this.entriesForDate(date);
   protected readonly dayTotalFn = (date: string) => this.dayTotal(date);
@@ -269,37 +273,41 @@ export class TimeEntriesPage implements OnInit {
   });
 
   async ngOnInit(): Promise<void> {
-    const [clients, projects, orders, settings] = await Promise.all([
-      this.clientsRepository.listClients(),
-      this.projectsRepository.listProjects(),
-      this.ordersRepository.listOrders(),
-      this.settingsRepository.getSettings(),
-    ]);
+    try {
+      const [clients, projects, orders, settings] = await Promise.all([
+        this.clientsRepository.listClients(),
+        this.projectsRepository.listProjects(),
+        this.ordersRepository.listOrders(),
+        this.settingsRepository.getSettings(),
+      ]);
 
-    this.clientOptions.set(
-      activeLookup(clients).map((client) => ({ id: client.id, label: client.name })),
-    );
-    this.projectOptions.set(
-      activeLookup(projects).map((project) => ({
-        id: project.id,
-        clientId: project.clientId,
-        label: `${project.code} - ${project.name}`,
-        useOrders: project.useOrders,
-      })),
-    );
-    this.orderOptions.set(
-      activeLookup(orders).map((order) => ({
-        id: order.id,
-        projectId: order.projectId,
-        label: `${order.code} - ${order.title}`,
-      })),
-    );
-    this.viewMode.set(settings.preferredTimeEntriesView);
-    this.autoSelectSingleCascadeOptions();
-    if (this.viewMode() === 'week') {
-      await this.store.setSelectedMonth(this.monthAnchorForWeek());
-    } else {
-      await this.store.loadMonthEntries();
+      this.clientOptions.set(
+        activeLookup(clients).map((client) => ({ id: client.id, label: client.name })),
+      );
+      this.projectOptions.set(
+        activeLookup(projects).map((project) => ({
+          id: project.id,
+          clientId: project.clientId,
+          label: `${project.code} - ${project.name}`,
+          useOrders: project.useOrders,
+        })),
+      );
+      this.orderOptions.set(
+        activeLookup(orders).map((order) => ({
+          id: order.id,
+          projectId: order.projectId,
+          label: `${order.code} - ${order.title}`,
+        })),
+      );
+      this.viewMode.set(settings.preferredTimeEntriesView);
+      this.autoSelectSingleCascadeOptions();
+      if (this.viewMode() === 'week') {
+        await this.store.setSelectedMonth(this.monthAnchorForWeek());
+      } else {
+        await this.store.loadMonthEntries();
+      }
+    } finally {
+      this.hasInitialLoadCompleted.set(true);
     }
   }
 

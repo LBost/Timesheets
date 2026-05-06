@@ -82,7 +82,7 @@ import { OrdersTableComponent } from './components/orders-table.component';
       <app-orders-state-messages
         [projectLookupError]="projectLookupError()"
         [storeError]="store.error()"
-        [isLoading]="store.isLoading()"
+        [isLoading]="showLoadingSkeleton()"
       />
       <app-orders-table
         [orders]="store.orders()"
@@ -113,6 +113,10 @@ export class OrdersPage implements OnInit {
   ];
   protected readonly projectLookupError = signal<string | null>(null);
   protected readonly selectedProjectOption = signal<{ id: number; label: string } | null>(null);
+  private readonly hasInitialLoadCompleted = signal(false);
+  protected readonly showLoadingSkeleton = computed(
+    () => !this.hasInitialLoadCompleted() && this.store.isLoading(),
+  );
   private selectedProjectId: number | null = null;
 
   protected readonly orderForm = this.formBuilder.group({
@@ -123,16 +127,20 @@ export class OrdersPage implements OnInit {
   });
 
   async ngOnInit(): Promise<void> {
-    const projects = await this.projectsRepository.listProjects();
-    this.projectOptions.set(
-      activeLookup(projects)
-        .filter((project) => project.useOrders)
-        .map((project) => ({
-          id: project.id,
-          label: `${project.code} · ${project.name}`,
-        })),
-    );
-    await this.store.loadOrders();
+    try {
+      const projects = await this.projectsRepository.listProjects();
+      this.projectOptions.set(
+        activeLookup(projects)
+          .filter((project) => project.useOrders)
+          .map((project) => ({
+            id: project.id,
+            label: `${project.code} · ${project.name}`,
+          })),
+      );
+      await this.store.loadOrders();
+    } finally {
+      this.hasInitialLoadCompleted.set(true);
+    }
   }
 
   protected async submitOrder(): Promise<void> {
