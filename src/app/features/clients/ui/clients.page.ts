@@ -56,117 +56,132 @@ import { ClientCreateInput, ClientUpdateInput } from '../models/client.model';
           addAriaLabel="Add client"
           (addRequested)="openAddMode()"
         />
-          <button #sheetOpenButton class="hidden" hlmSheetTrigger side="right" type="button"></button>
-          <ng-template hlmSheetPortal>
-            <hlm-sheet-content class="w-full border-border/40 sm:max-w-xl">
-              <div hlmSheetHeader>
-                <h2 hlmSheetTitle>{{ isEditing() ? 'Edit client' : 'Add client' }}</h2>
-              </div>
-              <form class="flex h-full flex-col gap-4 p-4" [formGroup]="clientForm" (ngSubmit)="submitClient()">
-                <label class="grid gap-1 text-sm">
-                  <span>Name *</span>
-                  <input hlmInput type="text" formControlName="name" placeholder="Braggel & Co. BV" />
-                </label>
+        <button #sheetOpenButton class="hidden" hlmSheetTrigger side="right" type="button"></button>
+        <ng-template hlmSheetPortal>
+          <hlm-sheet-content class="w-full border-border/40 sm:max-w-xl">
+            <div hlmSheetHeader>
+              <h2 hlmSheetTitle>{{ isEditing() ? 'Edit client' : 'Add client' }}</h2>
+            </div>
+            <form
+              class="flex h-full flex-col gap-4 p-4"
+              [formGroup]="clientForm"
+              (ngSubmit)="submitClient()"
+            >
+              <label class="grid gap-1 text-sm">
+                <span>Name *</span>
+                <input hlmInput type="text" formControlName="name" placeholder="Braggel & Co. BV" />
+              </label>
 
-                <label class="grid gap-1 text-sm">
-                  <span>Email</span>
-                  <input hlmInput type="email" formControlName="email" placeholder="contact@braggel.nl" />
-                </label>
+              <label class="grid gap-1 text-sm">
+                <span>Email</span>
+                <input
+                  hlmInput
+                  type="email"
+                  formControlName="email"
+                  placeholder="contact@braggel.nl"
+                />
+              </label>
 
-                <label class="grid gap-1 text-sm">
-                  <span>Phone</span>
-                  <input hlmInput type="text" formControlName="phone" placeholder="+31 6 12345678" />
-                </label>
+              <label class="grid gap-1 text-sm">
+                <span>Phone</span>
+                <input hlmInput type="text" formControlName="phone" placeholder="+31 6 12345678" />
+              </label>
 
-                <div class="grid gap-2 text-sm">
-                  <span>Calendar accent</span>
-                  <p class="text-xs text-muted-foreground">
-                    Used on the time entries calendar. Choose a preset, the color picker, or type a
-                    hex value.
-                  </p>
-                  <div class="flex flex-wrap gap-2">
-                    @for (hex of accentPresets; track hex) {
-                      <button
-                        type="button"
-                        class="size-9 rounded-md border-2 shadow-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
-                        [class.border-foreground]="clientForm.controls.accentColor.value === hex"
-                        [class.border-transparent]="clientForm.controls.accentColor.value !== hex"
-                        [style.background-color]="hex"
-                        [attr.aria-label]="'Accent ' + hex"
-                        [attr.aria-pressed]="clientForm.controls.accentColor.value === hex"
-                        (click)="selectAccentPreset(hex)"
-                      ></button>
-                    }
-                  </div>
-                  <div class="grid gap-1">
-                    <span class="text-xs text-muted-foreground">Custom</span>
-                    <div class="flex flex-wrap items-center gap-2">
-                      <input
-                        type="color"
-                        class="h-9 w-14 cursor-pointer rounded border border-border bg-transparent p-0.5"
-                        [value]="accentColorPickerSyncValue()"
-                        (input)="onAccentColorPicker($event)"
-                      />
-                      <input
-                        hlmInput
-                        type="text"
-                        class="min-w-0 flex-1 font-mono text-sm"
-                        formControlName="accentColor"
-                        placeholder="#6366f1"
-                        maxlength="7"
-                        autocomplete="off"
-                      />
-                      <button hlmBtn variant="outline" size="sm" type="button" (click)="clearAccentColor()">
-                        Clear
-                      </button>
-                    </div>
+              <div class="grid gap-2 text-sm">
+                <span>Calendar accent</span>
+                <p class="text-xs text-muted-foreground">
+                  Used on the time entries calendar. Choose a preset, the color picker, or type a
+                  hex value.
+                </p>
+                <div class="flex flex-wrap gap-2">
+                  @for (hex of accentPresets; track hex) {
+                    <button
+                      type="button"
+                      class="size-9 rounded-md border-2 shadow-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+                      [class.border-foreground]="clientForm.controls.accentColor.value === hex"
+                      [class.border-transparent]="clientForm.controls.accentColor.value !== hex"
+                      [style.background-color]="hex"
+                      [attr.aria-label]="'Accent ' + hex"
+                      [attr.aria-pressed]="clientForm.controls.accentColor.value === hex"
+                      (click)="selectAccentPreset(hex)"
+                    ></button>
+                  }
+                </div>
+                <div class="grid gap-1">
+                  <span class="text-xs text-muted-foreground">Custom</span>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <input
+                      type="color"
+                      class="h-9 w-14 cursor-pointer rounded border border-border bg-transparent p-0.5"
+                      [value]="accentColorPickerSyncValue()"
+                      (input)="onAccentColorPicker($event)"
+                    />
+                    <input
+                      hlmInput
+                      type="text"
+                      class="min-w-0 flex-1 font-mono text-sm"
+                      formControlName="accentColor"
+                      placeholder="#6366f1"
+                      maxlength="7"
+                      autocomplete="off"
+                    />
+                    <button
+                      hlmBtn
+                      variant="outline"
+                      size="sm"
+                      type="button"
+                      (click)="clearAccentColor()"
+                    >
+                      Clear
+                    </button>
                   </div>
                 </div>
+              </div>
 
-                <label class="grid gap-1 text-sm">
-                  <span>Status</span>
-                  <div
-                    hlmCombobox
-                    [value]="selectedStatusOption()"
-                    [itemToString]="statusItemToLabel"
-                    [isItemEqualToValue]="isSameStatusOption"
-                    (valueChange)="onStatusValueChange($event)"
-                  >
-                    <hlm-combobox-trigger class="w-full justify-between">
-                      <span>{{ selectedStatusOption()?.label ?? 'Select status' }}</span>
-                    </hlm-combobox-trigger>
-                    <ng-template hlmComboboxPortal>
-                      <div hlmComboboxContent>
-                        <div hlmComboboxList>
-                          @for (option of statusOptions; track option.label) {
-                            <hlm-combobox-item [value]="option">{{ option.label }}</hlm-combobox-item>
-                          }
-                        </div>
+              <label class="grid gap-1 text-sm">
+                <span>Status</span>
+                <div
+                  hlmCombobox
+                  [value]="selectedStatusOption()"
+                  [itemToString]="statusItemToLabel"
+                  [isItemEqualToValue]="isSameStatusOption"
+                  (valueChange)="onStatusValueChange($event)"
+                >
+                  <hlm-combobox-trigger class="w-full justify-between">
+                    <span>{{ selectedStatusOption()?.label ?? 'Select status' }}</span>
+                  </hlm-combobox-trigger>
+                  <ng-template hlmComboboxPortal>
+                    <div hlmComboboxContent>
+                      <div hlmComboboxList>
+                        @for (option of statusOptions; track option.label) {
+                          <hlm-combobox-item [value]="option">{{ option.label }}</hlm-combobox-item>
+                        }
                       </div>
-                    </ng-template>
-                  </div>
-                </label>
+                    </div>
+                  </ng-template>
+                </div>
+              </label>
 
-                @if (nameControl.touched && nameControl.invalid) {
-                  <p class="text-sm text-destructive">Name is required (max 120 chars).</p>
-                }
-                @if (emailControl.touched && emailControl.invalid) {
-                  <p class="text-sm text-destructive">Email format is invalid.</p>
-                }
+              @if (nameControl.touched && nameControl.invalid) {
+                <p class="text-sm text-destructive">Name is required (max 120 chars).</p>
+              }
+              @if (emailControl.touched && emailControl.invalid) {
+                <p class="text-sm text-destructive">Email format is invalid.</p>
+              }
 
-                <app-crud-sheet-footer
-                  [isEditing]="isEditing()"
-                  [isLoading]="store.isLoading()"
-                  [isValid]="clientForm.valid"
-                  createLabel="Create client"
-                  updateLabel="Save changes"
-                  (clearRequested)="resetForm()"
-                  (cancelRequested)="cancelSheet()"
-                />
-                <button #sheetCloseButton class="hidden" hlmSheetClose type="button"></button>
-              </form>
-            </hlm-sheet-content>
-          </ng-template>
+              <app-crud-sheet-footer
+                [isEditing]="isEditing()"
+                [isLoading]="store.isLoading()"
+                [isValid]="clientForm.valid"
+                createLabel="Create client"
+                updateLabel="Save changes"
+                (clearRequested)="resetForm()"
+                (cancelRequested)="cancelSheet()"
+              />
+              <button #sheetCloseButton class="hidden" hlmSheetClose type="button"></button>
+            </form>
+          </hlm-sheet-content>
+        </ng-template>
       </hlm-sheet>
       <div hlmSeparator></div>
 
@@ -188,41 +203,45 @@ import { ClientCreateInput, ClientUpdateInput } from '../models/client.model';
 
       <div hlmTableContainer class="rounded-lg border border-border">
         <table hlmTable>
-          <thead hlmTHead>
-            <tr hlmTr>
-              <th hlmTh>Client</th>
-              <th hlmTh class="w-12 text-center">Accent</th>
-              <th hlmTh>Contact</th>
-              <th hlmTh>Projects</th>
-              <th hlmTh>Status</th>
+          <thead hlmTableHeader>
+            <tr hlmTableRow>
+              <th hlmTableHead>Client</th>
+              <th hlmTableHead class="w-12 text-center">Accent</th>
+              <th hlmTableHead>Contact</th>
+              <th hlmTableHead>Projects</th>
+              <th hlmTableHead>Status</th>
             </tr>
           </thead>
-          <tbody hlmTBody>
+          <tbody hlmTableBody>
             @for (client of store.clients(); track client.id) {
-              <tr hlmTr [hlmContextMenuTrigger]="rowMenu" [hlmContextMenuTriggerData]="{ clientId: client.id }">
-                <td hlmTd>
+              <tr
+                hlmTableRow
+                [hlmContextMenuTrigger]="rowMenu"
+                [hlmContextMenuTriggerData]="{ clientId: client.id }"
+              >
+                <td hlmTableCell>
                   <div class="font-medium">{{ client.name }}</div>
                   <div class="text-xs text-muted-foreground">
                     Created {{ client.createdAt | date: 'mediumDate' }}
                   </div>
                 </td>
-                <td hlmTd class="text-center">
+                <td hlmTableCell class="text-center">
                   <span
                     class="inline-block size-4 rounded-full ring-1 ring-border"
                     [style.background-color]="clientAccentSwatch(client.accentColor, client.id)"
                     aria-hidden="true"
                   ></span>
                 </td>
-                <td hlmTd class="text-muted-foreground">
+                <td hlmTableCell class="text-muted-foreground">
                   <div>{{ client.email || 'No email' }}</div>
                   <div>{{ client.phone || 'No phone' }}</div>
                 </td>
-                <td hlmTd>{{ client.projectCount }}</td>
-                <td hlmTd>{{ client.isActive ? 'Active' : 'Inactive' }}</td>
+                <td hlmTableCell>{{ client.projectCount }}</td>
+                <td hlmTableCell>{{ client.isActive ? 'Active' : 'Inactive' }}</td>
               </tr>
             } @empty {
-              <tr hlmTr>
-                <td hlmTd class="py-4 text-muted-foreground" colspan="5">No clients yet.</td>
+              <tr hlmTableRow>
+                <td hlmTableCell class="py-4 text-muted-foreground" colspan="5">No clients yet.</td>
               </tr>
             }
           </tbody>
@@ -246,7 +265,8 @@ export class ClientsPage implements OnInit {
   private readonly formBuilder = inject(FormBuilder);
   private readonly toast = inject(ToastService);
   protected readonly accentPresets = CLIENT_ACCENT_PRESETS;
-  @ViewChild('sheetOpenButton', { read: ElementRef }) private readonly sheetOpenButton?: ElementRef<HTMLButtonElement>;
+  @ViewChild('sheetOpenButton', { read: ElementRef })
+  private readonly sheetOpenButton?: ElementRef<HTMLButtonElement>;
   @ViewChild('sheetCloseButton', { read: ElementRef })
   private readonly sheetCloseButton?: ElementRef<HTMLButtonElement>;
   protected readonly selectedId = signal<number | null>(null);
@@ -367,12 +387,13 @@ export class ClientsPage implements OnInit {
     this.clientForm.controls.isActive.setValue(option?.value ?? true);
   }
 
-  protected readonly statusItemToLabel = (option: { label: string; value: boolean } | null): string =>
-    option?.label ?? '';
+  protected readonly statusItemToLabel = (
+    option: { label: string; value: boolean } | null,
+  ): string => option?.label ?? '';
 
   protected readonly isSameStatusOption = (
     left: { label: string; value: boolean } | null,
-    right: { label: string; value: boolean } | null
+    right: { label: string; value: boolean } | null,
   ): boolean => left?.value === right?.value;
 
   protected accentColorPickerSyncValue(): string {
