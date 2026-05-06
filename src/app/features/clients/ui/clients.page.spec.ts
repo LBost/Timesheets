@@ -11,6 +11,7 @@ describe('ClientsPage', () => {
     isLoading: vi.fn(),
     error: vi.fn(),
     loadClients: vi.fn(),
+    loadClientsIfNeeded: vi.fn(),
     createClient: vi.fn(),
     updateClient: vi.fn(),
     archiveClient: vi.fn(),
@@ -22,6 +23,7 @@ describe('ClientsPage', () => {
     clientsStoreMock.isLoading.mockReturnValue(false);
     clientsStoreMock.error.mockReturnValue(null);
     clientsStoreMock.loadClients.mockResolvedValue(undefined);
+    clientsStoreMock.loadClientsIfNeeded.mockResolvedValue(undefined);
     clientsStoreMock.createClient.mockResolvedValue(undefined);
     clientsStoreMock.updateClient.mockResolvedValue(undefined);
     clientsStoreMock.archiveClient.mockResolvedValue(undefined);
@@ -40,7 +42,7 @@ describe('ClientsPage', () => {
   it('loads clients on init', () => {
     const fixture = TestBed.createComponent(ClientsPage);
     fixture.detectChanges();
-    expect(clientsStoreMock.loadClients).toHaveBeenCalled();
+    expect(clientsStoreMock.loadClientsIfNeeded).toHaveBeenCalled();
   });
 
   it('submits create action when form is valid', async () => {

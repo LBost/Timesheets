@@ -14,7 +14,7 @@ import { HlmSheetImports } from '@spartan-ng/helm/sheet';
 import { ToastService } from '../../../core/feedback/toast.service';
 import { activeLookup, selectionFromValueChange } from '../../../shared/components/combobox-selection/combobox-selection.util';
 import { FeatureHeaderActionsComponent } from '../../../shared/components/feature-header-actions/feature-header-actions.component';
-import { ClientsRepository } from '../../clients/data/clients.repository';
+import { ClientsStore } from '../../clients/state/clients.store';
 import { BillingModel, ProjectCreateInput, ProjectUpdateInput } from '../models/project.model';
 import { ProjectsStore } from '../state/projects.store';
 import { ProjectsFeedbackStateComponent } from './components/projects-feedback-state.component';
@@ -39,7 +39,10 @@ import { ProjectsTableComponent } from './components/projects-table.component';
           title="Projects"
           subtitle="Configure project billing, ownership, and status."
           addAriaLabel="Add project"
+          [showRefresh]="true"
+          refreshAriaLabel="Refresh projects"
           (addRequested)="openAddMode()"
+          (refreshRequested)="refreshProjects()"
         />
           <button #sheetOpenButton class="hidden" hlmSheetTrigger side="right" type="button"></button>
           <ng-template hlmSheetPortal>
@@ -96,7 +99,7 @@ import { ProjectsTableComponent } from './components/projects-table.component';
 })
 export class ProjectsPage implements OnInit {
   protected readonly store = inject(ProjectsStore);
-  private readonly clientsRepository = inject(ClientsRepository);
+  private readonly clientsStore = inject(ClientsStore);
   private readonly formBuilder = inject(FormBuilder);
   private readonly toast = inject(ToastService);
   @ViewChild('sheetOpenButton', { read: ElementRef }) private readonly sheetOpenButton?: ElementRef<HTMLButtonElement>;
@@ -116,7 +119,12 @@ export class ProjectsPage implements OnInit {
     { label: 'Book directly on project', value: false },
     { label: 'Require order selection', value: true },
   ];
-  protected readonly clientOptions = signal<Array<{ id: number; label: string }>>([]);
+  protected readonly clientOptions = computed<Array<{ id: number; label: string }>>(() =>
+    activeLookup(this.clientsStore.clients()).map((client) => ({
+      id: client.id,
+      label: this.clientLabel(client.id, client.name),
+    })),
+  );
   protected readonly clientLookupError = signal<string | null>(null);
   protected readonly selectedClientOption = signal<{ id: number; label: string } | null>(null);
   private readonly hasInitialLoadCompleted = signal(false);
@@ -139,15 +147,10 @@ export class ProjectsPage implements OnInit {
 
   async ngOnInit(): Promise<void> {
     try {
-      const clients = await this.clientsRepository.listClients();
-      this.clientOptions.set(
-        activeLookup(clients)
-          .map((client) => ({
-          id: client.id,
-          label: this.clientLabel(client.id, client.name),
-        }))
-      );
-      await this.store.loadProjects();
+      await Promise.all([
+        this.clientsStore.loadClientsIfNeeded(),
+        this.store.loadProjectsIfNeeded(),
+      ]);
     } finally {
       this.hasInitialLoadCompleted.set(true);
     }
@@ -222,6 +225,13 @@ export class ProjectsPage implements OnInit {
       this.toast.show('Project deleted.', 'success');
     } else if (mode === 'archived') {
       this.toast.show('Project has linked orders or entries, so it was archived instead.', 'info');
+    }
+  }
+
+  protected async refreshProjects(): Promise<void> {
+    await Promise.all([this.clientsStore.loadClients(), this.store.loadProjects()]);
+    if (!this.store.error() && !this.clientsStore.error()) {
+      this.toast.show('Projects refreshed.', 'success');
     }
   }
 

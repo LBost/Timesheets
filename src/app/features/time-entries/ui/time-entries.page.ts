@@ -15,14 +15,14 @@ import { HlmSkeletonImports } from '@spartan-ng/helm/skeleton';
 import { ToastService } from '../../../core/feedback/toast.service';
 import { activeLookup } from '../../../shared/components/combobox-selection/combobox-selection.util';
 import { resolveClientAccentHex } from '../../../shared/components/client-accent/client-accent.util';
-import { ClientsRepository } from '../../clients/data/clients.repository';
-import { OrdersRepository } from '../../orders/data/orders.repository';
-import { ProjectsRepository } from '../../projects/data/projects.repository';
-import { SettingsRepository } from '../../settings/data/settings.repository';
+import { ClientsStore } from '../../clients/state/clients.store';
+import { OrdersStore } from '../../orders/state/orders.store';
+import { ProjectsStore } from '../../projects/state/projects.store';
+import { SettingsStore } from '../../settings/state/settings.store';
 import { TimeEntryCreateInput, TimeEntryUpdateInput } from '../models/time-entry.model';
 import { TimeEntriesStore } from '../state/time-entries.store';
 import { provideIcons } from '@ng-icons/core';
-import { lucideCalendar, lucideLayers, lucidePlus } from '@ng-icons/lucide';
+import { lucideCalendar, lucideLayers, lucidePlus, lucideRefreshCw } from '@ng-icons/lucide';
 import { TimeEntriesCalendarToolbarComponent } from './components/time-entries-calendar-toolbar.component';
 import { TimeEntriesMonthSummaryComponent } from './components/time-entries-month-summary.component';
 import { TimeEntriesCalendarGridComponent } from './components/time-entries-calendar-grid.component';
@@ -59,7 +59,7 @@ type WeekDay = {
     TimeEntriesDayPickerDialogComponent,
     TimeEntrySheetFormComponent,
   ],
-  providers: [provideIcons({ lucidePlus, lucideLayers, lucideCalendar })],
+  providers: [provideIcons({ lucidePlus, lucideLayers, lucideCalendar, lucideRefreshCw })],
   template: `
     <hlm-sheet>
       <section class="mx-auto flex w-full max-w-7xl flex-col gap-5">
@@ -73,6 +73,7 @@ type WeekDay = {
           (monthInputChange)="onMonthInputChange($event)"
           (weekInputChange)="onWeekInputChange($event)"
           (addToday)="openAddForDate(todayIso())"
+          (refreshRequested)="refreshCurrentPeriod()"
           (viewModeChange)="onViewModeChange($event)"
         />
 
@@ -171,10 +172,10 @@ type WeekDay = {
 export class TimeEntriesPage implements OnInit {
   protected readonly store = inject(TimeEntriesStore);
   private readonly formBuilder = inject(FormBuilder);
-  private readonly clientsRepository = inject(ClientsRepository);
-  private readonly projectsRepository = inject(ProjectsRepository);
-  private readonly ordersRepository = inject(OrdersRepository);
-  private readonly settingsRepository = inject(SettingsRepository);
+  private readonly clientsStore = inject(ClientsStore);
+  private readonly projectsStore = inject(ProjectsStore);
+  private readonly ordersStore = inject(OrdersStore);
+  private readonly settingsStore = inject(SettingsStore);
   private readonly toast = inject(ToastService);
 
   @ViewChild('sheetOpenButton', { read: ElementRef })
@@ -182,9 +183,24 @@ export class TimeEntriesPage implements OnInit {
   @ViewChild('sheetCloseButton', { read: ElementRef })
   private readonly sheetCloseButton?: ElementRef<HTMLButtonElement>;
 
-  protected readonly clientOptions = signal<ClientOption[]>([]);
-  protected readonly projectOptions = signal<ProjectOption[]>([]);
-  protected readonly orderOptions = signal<OrderOption[]>([]);
+  protected readonly clientOptions = computed<ClientOption[]>(() =>
+    activeLookup(this.clientsStore.clients()).map((client) => ({ id: client.id, label: client.name })),
+  );
+  protected readonly projectOptions = computed<ProjectOption[]>(() =>
+    activeLookup(this.projectsStore.projects()).map((project) => ({
+      id: project.id,
+      clientId: project.clientId,
+      label: `${project.code} - ${project.name}`,
+      useOrders: project.useOrders,
+    })),
+  );
+  protected readonly orderOptions = computed<OrderOption[]>(() =>
+    activeLookup(this.ordersStore.orders()).map((order) => ({
+      id: order.id,
+      projectId: order.projectId,
+      label: `${order.code} - ${order.title}`,
+    })),
+  );
   /** When set, a dialog lists every entry for that calendar day (multi-entry days). */
   protected readonly dayEntriesPickerDate = signal<string | null>(null);
   protected readonly dayPickerDialogState = computed(() =>
@@ -274,37 +290,18 @@ export class TimeEntriesPage implements OnInit {
 
   async ngOnInit(): Promise<void> {
     try {
-      const [clients, projects, orders, settings] = await Promise.all([
-        this.clientsRepository.listClients(),
-        this.projectsRepository.listProjects(),
-        this.ordersRepository.listOrders(),
-        this.settingsRepository.getSettings(),
+      await Promise.all([
+        this.clientsStore.loadClientsIfNeeded(),
+        this.projectsStore.loadProjectsIfNeeded(),
+        this.ordersStore.loadOrdersIfNeeded(),
+        this.settingsStore.loadSettingsIfNeeded(),
       ]);
-
-      this.clientOptions.set(
-        activeLookup(clients).map((client) => ({ id: client.id, label: client.name })),
-      );
-      this.projectOptions.set(
-        activeLookup(projects).map((project) => ({
-          id: project.id,
-          clientId: project.clientId,
-          label: `${project.code} - ${project.name}`,
-          useOrders: project.useOrders,
-        })),
-      );
-      this.orderOptions.set(
-        activeLookup(orders).map((order) => ({
-          id: order.id,
-          projectId: order.projectId,
-          label: `${order.code} - ${order.title}`,
-        })),
-      );
-      this.viewMode.set(settings.preferredTimeEntriesView);
+      this.viewMode.set(this.settingsStore.preferredTimeEntriesView());
       this.autoSelectSingleCascadeOptions();
       if (this.viewMode() === 'week') {
         await this.store.setSelectedMonth(this.monthAnchorForWeek());
       } else {
-        await this.store.loadMonthEntries();
+        await this.store.loadMonthEntriesIfNeeded();
       }
     } finally {
       this.hasInitialLoadCompleted.set(true);
@@ -422,12 +419,30 @@ export class TimeEntriesPage implements OnInit {
 
   protected onViewModeChange(mode: 'month' | 'week'): void {
     this.viewMode.set(mode);
-    void this.settingsRepository.savePreferredTimeEntriesView(mode);
+    void this.settingsStore.savePreferredTimeEntriesView(mode);
     this.closeDayEntriesPicker();
     if (mode === 'week') {
       const monthAnchor = this.store.selectedMonth();
       this.selectedWeekStart.set(this.startOfWeek(monthAnchor));
       void this.store.setSelectedMonth(this.monthAnchorForWeek());
+    }
+  }
+
+  protected async refreshCurrentPeriod(): Promise<void> {
+    await Promise.all([
+      this.clientsStore.loadClients(),
+      this.projectsStore.loadProjects(),
+      this.ordersStore.loadOrders(),
+      this.settingsStore.loadSettings(),
+    ]);
+    if (this.viewMode() === 'week') {
+      await this.store.setSelectedMonth(this.monthAnchorForWeek());
+    } else {
+      const month = this.store.selectedMonth();
+      await this.store.loadMonthEntries(month.getFullYear(), month.getMonth());
+    }
+    if (!this.store.error()) {
+      this.toast.show('Time entries refreshed.', 'success');
     }
   }
 

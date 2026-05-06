@@ -12,6 +12,11 @@ describe('TimeEntriesStore', () => {
   };
 
   beforeEach(() => {
+    repositoryMock.listEntriesForMonth.mockReset();
+    repositoryMock.createEntry.mockReset();
+    repositoryMock.updateEntry.mockReset();
+    repositoryMock.deleteEntry.mockReset();
+
     repositoryMock.listEntriesForMonth.mockResolvedValue([]);
     repositoryMock.createEntry.mockResolvedValue({});
     repositoryMock.updateEntry.mockResolvedValue({});
@@ -29,6 +34,17 @@ describe('TimeEntriesStore', () => {
     const store = TestBed.inject(TimeEntriesStore);
     await store.loadMonthEntries(2026, 4);
     expect(repositoryMock.listEntriesForMonth).toHaveBeenCalledWith(2026, 4);
+    expect(store.hasLoaded()).toBe(true);
+    expect(store.lastLoadedAt()).not.toBeNull();
+  });
+
+  it('skips month request when entries are already loaded', async () => {
+    const store = TestBed.inject(TimeEntriesStore);
+
+    await store.loadMonthEntriesIfNeeded(2026, 4);
+    await store.loadMonthEntriesIfNeeded(2026, 4);
+
+    expect(repositoryMock.listEntriesForMonth).toHaveBeenCalledTimes(1);
   });
 
   it('opens add sheet for date', () => {

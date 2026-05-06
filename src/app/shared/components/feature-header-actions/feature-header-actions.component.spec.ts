@@ -27,7 +27,21 @@ describe('FeatureHeaderActionsComponent', () => {
     fixture.detectChanges();
 
     const emitSpy = vi.spyOn(fixture.componentInstance.addRequested, 'emit');
-    const button = fixture.nativeElement.querySelector('button') as HTMLButtonElement;
+    const button = fixture.nativeElement.querySelector('[aria-label="Add"]') as HTMLButtonElement;
+    button.click();
+
+    expect(emitSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('emits refreshRequested when refresh button is clicked', () => {
+    const fixture = TestBed.createComponent(FeatureHeaderActionsComponent);
+    fixture.componentRef.setInput('title', 'Clients');
+    fixture.componentRef.setInput('subtitle', 'Manage clients');
+    fixture.componentRef.setInput('showRefresh', true);
+    fixture.detectChanges();
+
+    const emitSpy = vi.spyOn(fixture.componentInstance.refreshRequested, 'emit');
+    const button = fixture.nativeElement.querySelector('[aria-label="Refresh"]') as HTMLButtonElement;
     button.click();
 
     expect(emitSpy).toHaveBeenCalledTimes(1);

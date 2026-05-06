@@ -78,6 +78,17 @@ import { HlmIcon } from '@spartan-ng/helm/icon';
           size="icon"
           variant="outline"
           class="cursor-pointer"
+          aria-label="Refresh time entries"
+          (click)="refreshRequested.emit()"
+        >
+          <ng-icon hlm size="sm" name="lucideRefreshCw" />
+        </button>
+        <button
+          hlmBtn
+          type="button"
+          size="icon"
+          variant="outline"
+          class="cursor-pointer"
           [attr.aria-label]="'Add entry for ' + todayIso()"
           (click)="addToday.emit()"
         >
@@ -98,5 +109,6 @@ export class TimeEntriesCalendarToolbarComponent {
   readonly monthInputChange = output<Event>();
   readonly weekInputChange = output<Event>();
   readonly addToday = output<void>();
+  readonly refreshRequested = output<void>();
   readonly viewModeChange = output<'month' | 'week'>();
 }

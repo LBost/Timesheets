@@ -1,9 +1,9 @@
 import { TestBed } from '@angular/core/testing';
 import { vi } from 'vitest';
-import { ClientsRepository } from '../../clients/data/clients.repository';
-import { OrdersRepository } from '../../orders/data/orders.repository';
-import { ProjectsRepository } from '../../projects/data/projects.repository';
-import { SettingsRepository } from '../../settings/data/settings.repository';
+import { ClientsStore } from '../../clients/state/clients.store';
+import { OrdersStore } from '../../orders/state/orders.store';
+import { ProjectsStore } from '../../projects/state/projects.store';
+import { SettingsStore } from '../../settings/state/settings.store';
 import { TimeEntriesStore } from '../state/time-entries.store';
 import { TimeEntriesPage } from './time-entries.page';
 
@@ -20,6 +20,7 @@ describe('TimeEntriesPage', () => {
     isLoading: vi.fn(),
     error: vi.fn(),
     loadMonthEntries: vi.fn(),
+    loadMonthEntriesIfNeeded: vi.fn(),
     goToPreviousMonth: vi.fn(),
     goToNextMonth: vi.fn(),
     setSelectedMonth: vi.fn(),
@@ -31,11 +32,25 @@ describe('TimeEntriesPage', () => {
     deleteEntry: vi.fn(),
   };
 
-  const clientsRepositoryMock = { listClients: vi.fn() };
-  const projectsRepositoryMock = { listProjects: vi.fn() };
-  const ordersRepositoryMock = { listOrders: vi.fn() };
-  const settingsRepositoryMock = {
-    getSettings: vi.fn(),
+  const clientsStoreMock = {
+    clients: vi.fn(),
+    loadClients: vi.fn(),
+    loadClientsIfNeeded: vi.fn(),
+  };
+  const projectsStoreMock = {
+    projects: vi.fn(),
+    loadProjects: vi.fn(),
+    loadProjectsIfNeeded: vi.fn(),
+  };
+  const ordersStoreMock = {
+    orders: vi.fn(),
+    loadOrders: vi.fn(),
+    loadOrdersIfNeeded: vi.fn(),
+  };
+  const settingsStoreMock = {
+    preferredTimeEntriesView: vi.fn(),
+    loadSettings: vi.fn(),
+    loadSettingsIfNeeded: vi.fn(),
     savePreferredTimeEntriesView: vi.fn(),
   };
 
@@ -51,6 +66,7 @@ describe('TimeEntriesPage', () => {
     storeMock.isLoading.mockReturnValue(false);
     storeMock.error.mockReturnValue(null);
     storeMock.loadMonthEntries.mockResolvedValue(undefined);
+    storeMock.loadMonthEntriesIfNeeded.mockResolvedValue(undefined);
     storeMock.goToPreviousMonth.mockResolvedValue(undefined);
     storeMock.goToNextMonth.mockResolvedValue(undefined);
     storeMock.setSelectedMonth.mockResolvedValue(undefined);
@@ -58,26 +74,28 @@ describe('TimeEntriesPage', () => {
     storeMock.updateEntry.mockResolvedValue(undefined);
     storeMock.deleteEntry.mockResolvedValue(undefined);
 
-    clientsRepositoryMock.listClients.mockResolvedValue([]);
-    projectsRepositoryMock.listProjects.mockResolvedValue([]);
-    ordersRepositoryMock.listOrders.mockResolvedValue([]);
-    settingsRepositoryMock.getSettings.mockResolvedValue({
-      nextInvoiceNumber: 'RLZ-20260001',
-      preferredTimeEntriesView: 'month',
-    });
-    settingsRepositoryMock.savePreferredTimeEntriesView.mockResolvedValue({
-      nextInvoiceNumber: 'RLZ-20260001',
-      preferredTimeEntriesView: 'month',
-    });
+    clientsStoreMock.clients.mockReturnValue([]);
+    clientsStoreMock.loadClients.mockResolvedValue(undefined);
+    clientsStoreMock.loadClientsIfNeeded.mockResolvedValue(undefined);
+    projectsStoreMock.projects.mockReturnValue([]);
+    projectsStoreMock.loadProjects.mockResolvedValue(undefined);
+    projectsStoreMock.loadProjectsIfNeeded.mockResolvedValue(undefined);
+    ordersStoreMock.orders.mockReturnValue([]);
+    ordersStoreMock.loadOrders.mockResolvedValue(undefined);
+    ordersStoreMock.loadOrdersIfNeeded.mockResolvedValue(undefined);
+    settingsStoreMock.preferredTimeEntriesView.mockReturnValue('month');
+    settingsStoreMock.loadSettings.mockResolvedValue(undefined);
+    settingsStoreMock.loadSettingsIfNeeded.mockResolvedValue(undefined);
+    settingsStoreMock.savePreferredTimeEntriesView.mockResolvedValue(true);
 
     await TestBed.configureTestingModule({
       imports: [TimeEntriesPage],
       providers: [
         { provide: TimeEntriesStore, useValue: storeMock },
-        { provide: ClientsRepository, useValue: clientsRepositoryMock },
-        { provide: ProjectsRepository, useValue: projectsRepositoryMock },
-        { provide: OrdersRepository, useValue: ordersRepositoryMock },
-        { provide: SettingsRepository, useValue: settingsRepositoryMock },
+        { provide: ClientsStore, useValue: clientsStoreMock },
+        { provide: ProjectsStore, useValue: projectsStoreMock },
+        { provide: OrdersStore, useValue: ordersStoreMock },
+        { provide: SettingsStore, useValue: settingsStoreMock },
       ],
     }).compileComponents();
   });
@@ -92,8 +110,9 @@ describe('TimeEntriesPage', () => {
     fixture.detectChanges();
     await fixture.whenStable();
 
-    expect(clientsRepositoryMock.listClients).toHaveBeenCalled();
-    expect(projectsRepositoryMock.listProjects).toHaveBeenCalled();
-    expect(ordersRepositoryMock.listOrders).toHaveBeenCalled();
+    expect(clientsStoreMock.loadClientsIfNeeded).toHaveBeenCalled();
+    expect(projectsStoreMock.loadProjectsIfNeeded).toHaveBeenCalled();
+    expect(ordersStoreMock.loadOrdersIfNeeded).toHaveBeenCalled();
+    expect(settingsStoreMock.loadSettingsIfNeeded).toHaveBeenCalled();
   });
 });

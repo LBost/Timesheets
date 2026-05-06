@@ -46,7 +46,19 @@ describe('ProjectsStore', () => {
     await store.loadProjects();
 
     expect(store.projects().length).toBe(1);
+    expect(store.hasLoaded()).toBe(true);
+    expect(store.lastLoadedAt()).not.toBeNull();
     expect(store.error()).toBeNull();
+  });
+
+  it('skips list request when projects are already loaded', async () => {
+    repositoryMock.listProjects.mockResolvedValue([]);
+    const store = TestBed.inject(ProjectsStore);
+
+    await store.loadProjectsIfNeeded();
+    await store.loadProjectsIfNeeded();
+
+    expect(repositoryMock.listProjects).toHaveBeenCalledTimes(1);
   });
 
   it('creates and appends a project', async () => {

@@ -41,7 +41,19 @@ describe('ClientsStore', () => {
     await store.loadClients();
 
     expect(store.clients().length).toBe(1);
+    expect(store.hasLoaded()).toBe(true);
+    expect(store.lastLoadedAt()).not.toBeNull();
     expect(store.error()).toBeNull();
+  });
+
+  it('skips list request when clients are already loaded', async () => {
+    repositoryMock.listClients.mockResolvedValue([]);
+    const store = TestBed.inject(ClientsStore);
+
+    await store.loadClientsIfNeeded();
+    await store.loadClientsIfNeeded();
+
+    expect(repositoryMock.listClients).toHaveBeenCalledTimes(1);
   });
 
   it('creates and appends a client', async () => {

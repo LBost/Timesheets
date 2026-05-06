@@ -3,7 +3,7 @@ import { vi } from 'vitest';
 
 import { ProjectsPage } from './projects.page';
 import { ProjectsStore } from '../state/projects.store';
-import { ClientsRepository } from '../../clients/data/clients.repository';
+import { ClientsStore } from '../../clients/state/clients.store';
 
 describe('ProjectsPage', () => {
   const projectsStoreMock = {
@@ -12,12 +12,16 @@ describe('ProjectsPage', () => {
     isLoading: vi.fn(),
     error: vi.fn(),
     loadProjects: vi.fn(),
+    loadProjectsIfNeeded: vi.fn(),
     createProject: vi.fn(),
     updateProject: vi.fn(),
     archiveProject: vi.fn(),
   };
-  const clientsRepositoryMock = {
-    listClients: vi.fn(),
+  const clientsStoreMock = {
+    clients: vi.fn(),
+    error: vi.fn(),
+    loadClients: vi.fn(),
+    loadClientsIfNeeded: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -26,16 +30,20 @@ describe('ProjectsPage', () => {
     projectsStoreMock.isLoading.mockReturnValue(false);
     projectsStoreMock.error.mockReturnValue(null);
     projectsStoreMock.loadProjects.mockResolvedValue(undefined);
+    projectsStoreMock.loadProjectsIfNeeded.mockResolvedValue(undefined);
     projectsStoreMock.createProject.mockResolvedValue(undefined);
     projectsStoreMock.updateProject.mockResolvedValue(undefined);
     projectsStoreMock.archiveProject.mockResolvedValue(undefined);
-    clientsRepositoryMock.listClients.mockResolvedValue([]);
+    clientsStoreMock.clients.mockReturnValue([]);
+    clientsStoreMock.error.mockReturnValue(null);
+    clientsStoreMock.loadClients.mockResolvedValue(undefined);
+    clientsStoreMock.loadClientsIfNeeded.mockResolvedValue(undefined);
 
     await TestBed.configureTestingModule({
       imports: [ProjectsPage],
       providers: [
         { provide: ProjectsStore, useValue: projectsStoreMock },
-        { provide: ClientsRepository, useValue: clientsRepositoryMock },
+        { provide: ClientsStore, useValue: clientsStoreMock },
       ],
     }).compileComponents();
   });
@@ -49,7 +57,7 @@ describe('ProjectsPage', () => {
     const fixture = TestBed.createComponent(ProjectsPage);
     fixture.detectChanges();
     await fixture.whenStable();
-    expect(clientsRepositoryMock.listClients).toHaveBeenCalled();
-    expect(projectsStoreMock.loadProjects).toHaveBeenCalled();
+    expect(clientsStoreMock.loadClientsIfNeeded).toHaveBeenCalled();
+    expect(projectsStoreMock.loadProjectsIfNeeded).toHaveBeenCalled();
   });
 });

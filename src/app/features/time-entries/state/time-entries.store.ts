@@ -11,6 +11,8 @@ type TimeEntriesState = {
   editingEntryId: number | null;
   isSheetOpen: boolean;
   isLoading: boolean;
+  hasLoaded: boolean;
+  lastLoadedAt: number | null;
   error: string | null;
 };
 
@@ -23,6 +25,8 @@ const initialState: TimeEntriesState = {
   editingEntryId: null,
   isSheetOpen: false,
   isLoading: false,
+  hasLoaded: false,
+  lastLoadedAt: null,
   error: null,
 };
 
@@ -50,18 +54,35 @@ export const TimeEntriesStore = signalStore(
       store.entries().reduce((total, entry) => total + entry.hours, 0),
     ),
   })),
-  withMethods((store, repository = inject(TimeEntriesRepository)) => ({
-    async loadMonthEntries(year = store.selectedMonth().getFullYear(), month = store.selectedMonth().getMonth()): Promise<void> {
+  withMethods((store, repository = inject(TimeEntriesRepository)) => {
+    const loadMonthEntries = async (
+      year = store.selectedMonth().getFullYear(),
+      month = store.selectedMonth().getMonth(),
+    ): Promise<void> => {
       patchState(store, { isLoading: true, error: null });
       try {
         const entries = await repository.listEntriesForMonth(year, month);
-        patchState(store, { entries, isLoading: false });
+        patchState(store, { entries, isLoading: false, hasLoaded: true, lastLoadedAt: Date.now() });
       } catch (error) {
         patchState(store, {
           isLoading: false,
           error: error instanceof Error ? error.message : 'Failed to load time entries.',
         });
       }
+    };
+
+    return {
+    async loadMonthEntries(year = store.selectedMonth().getFullYear(), month = store.selectedMonth().getMonth()): Promise<void> {
+      await loadMonthEntries(year, month);
+    },
+    async loadMonthEntriesIfNeeded(
+      year = store.selectedMonth().getFullYear(),
+      month = store.selectedMonth().getMonth(),
+    ): Promise<void> {
+      if (store.hasLoaded()) {
+        return;
+      }
+      await loadMonthEntries(year, month);
     },
     async goToPreviousMonth(): Promise<void> {
       const current = store.selectedMonth();
@@ -69,7 +90,7 @@ export const TimeEntriesStore = signalStore(
       patchState(store, { selectedMonth: next, isLoading: true, error: null });
       try {
         const entries = await repository.listEntriesForMonth(next.getFullYear(), next.getMonth());
-        patchState(store, { entries, isLoading: false });
+        patchState(store, { entries, isLoading: false, hasLoaded: true, lastLoadedAt: Date.now() });
       } catch (error) {
         patchState(store, {
           isLoading: false,
@@ -83,7 +104,7 @@ export const TimeEntriesStore = signalStore(
       patchState(store, { selectedMonth: next, isLoading: true, error: null });
       try {
         const entries = await repository.listEntriesForMonth(next.getFullYear(), next.getMonth());
-        patchState(store, { entries, isLoading: false });
+        patchState(store, { entries, isLoading: false, hasLoaded: true, lastLoadedAt: Date.now() });
       } catch (error) {
         patchState(store, {
           isLoading: false,
@@ -99,7 +120,7 @@ export const TimeEntriesStore = signalStore(
           normalized.getFullYear(),
           normalized.getMonth(),
         );
-        patchState(store, { entries, isLoading: false });
+        patchState(store, { entries, isLoading: false, hasLoaded: true, lastLoadedAt: Date.now() });
       } catch (error) {
         patchState(store, {
           isLoading: false,
@@ -133,7 +154,7 @@ export const TimeEntriesStore = signalStore(
         await repository.createEntry(input);
         const month = store.selectedMonth();
         const entries = await repository.listEntriesForMonth(month.getFullYear(), month.getMonth());
-        patchState(store, { entries, isLoading: false });
+        patchState(store, { entries, isLoading: false, hasLoaded: true, lastLoadedAt: Date.now() });
       } catch (error) {
         patchState(store, {
           isLoading: false,
@@ -151,7 +172,7 @@ export const TimeEntriesStore = signalStore(
         }
         const month = store.selectedMonth();
         const entries = await repository.listEntriesForMonth(month.getFullYear(), month.getMonth());
-        patchState(store, { entries, isLoading: false });
+        patchState(store, { entries, isLoading: false, hasLoaded: true, lastLoadedAt: Date.now() });
       } catch (error) {
         patchState(store, {
           isLoading: false,
@@ -178,5 +199,6 @@ export const TimeEntriesStore = signalStore(
         });
       }
     },
-  })),
+  };
+  }),
 );

@@ -44,7 +44,10 @@ import { ClientsTableComponent } from './components/clients-table.component';
           title="Clients"
           subtitle="Manage client contacts and activation status."
           addAriaLabel="Add client"
+          [showRefresh]="true"
+          refreshAriaLabel="Refresh clients"
           (addRequested)="openAddMode()"
+          (refreshRequested)="refreshClients()"
         />
         <button #sheetOpenButton class="hidden" hlmSheetTrigger side="right" type="button"></button>
         <ng-template hlmSheetPortal>
@@ -147,7 +150,7 @@ export class ClientsPage implements OnInit {
 
   async ngOnInit(): Promise<void> {
     try {
-      await this.store.loadClients();
+      await this.store.loadClientsIfNeeded();
     } finally {
       this.hasInitialLoadCompleted.set(true);
     }
@@ -209,6 +212,13 @@ export class ClientsPage implements OnInit {
       this.toast.show('Client deleted.', 'success');
     } else if (mode === 'archived') {
       this.toast.show('Client has linked projects, so it was archived instead.', 'info');
+    }
+  }
+
+  protected async refreshClients(): Promise<void> {
+    await this.store.loadClients();
+    if (!this.store.error()) {
+      this.toast.show('Clients refreshed.', 'success');
     }
   }
 

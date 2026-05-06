@@ -42,7 +42,19 @@ describe('OrdersStore', () => {
     await store.loadOrders();
 
     expect(store.orders().length).toBe(1);
+    expect(store.hasLoaded()).toBe(true);
+    expect(store.lastLoadedAt()).not.toBeNull();
     expect(store.error()).toBeNull();
+  });
+
+  it('skips list request when orders are already loaded', async () => {
+    repositoryMock.listOrders.mockResolvedValue([]);
+    const store = TestBed.inject(OrdersStore);
+
+    await store.loadOrdersIfNeeded();
+    await store.loadOrdersIfNeeded();
+
+    expect(repositoryMock.listOrders).toHaveBeenCalledTimes(1);
   });
 
   it('creates and appends an order', async () => {

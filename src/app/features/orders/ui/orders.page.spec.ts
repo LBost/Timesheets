@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { vi } from 'vitest';
 
-import { ProjectsRepository } from '../../projects/data/projects.repository';
+import { ProjectsStore } from '../../projects/state/projects.store';
 import { OrdersPage } from './orders.page';
 import { OrdersStore } from '../state/orders.store';
 
@@ -12,12 +12,16 @@ describe('OrdersPage', () => {
     isLoading: vi.fn(),
     error: vi.fn(),
     loadOrders: vi.fn(),
+    loadOrdersIfNeeded: vi.fn(),
     createOrder: vi.fn(),
     updateOrder: vi.fn(),
     archiveOrder: vi.fn(),
   };
-  const projectsRepositoryMock = {
-    listProjects: vi.fn(),
+  const projectsStoreMock = {
+    projects: vi.fn(),
+    error: vi.fn(),
+    loadProjects: vi.fn(),
+    loadProjectsIfNeeded: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -26,16 +30,20 @@ describe('OrdersPage', () => {
     ordersStoreMock.isLoading.mockReturnValue(false);
     ordersStoreMock.error.mockReturnValue(null);
     ordersStoreMock.loadOrders.mockResolvedValue(undefined);
+    ordersStoreMock.loadOrdersIfNeeded.mockResolvedValue(undefined);
     ordersStoreMock.createOrder.mockResolvedValue(undefined);
     ordersStoreMock.updateOrder.mockResolvedValue(undefined);
     ordersStoreMock.archiveOrder.mockResolvedValue(undefined);
-    projectsRepositoryMock.listProjects.mockResolvedValue([]);
+    projectsStoreMock.projects.mockReturnValue([]);
+    projectsStoreMock.error.mockReturnValue(null);
+    projectsStoreMock.loadProjects.mockResolvedValue(undefined);
+    projectsStoreMock.loadProjectsIfNeeded.mockResolvedValue(undefined);
 
     await TestBed.configureTestingModule({
       imports: [OrdersPage],
       providers: [
         { provide: OrdersStore, useValue: ordersStoreMock },
-        { provide: ProjectsRepository, useValue: projectsRepositoryMock },
+        { provide: ProjectsStore, useValue: projectsStoreMock },
       ],
     }).compileComponents();
   });
@@ -49,7 +57,7 @@ describe('OrdersPage', () => {
     const fixture = TestBed.createComponent(OrdersPage);
     fixture.detectChanges();
     await fixture.whenStable();
-    expect(projectsRepositoryMock.listProjects).toHaveBeenCalled();
-    expect(ordersStoreMock.loadOrders).toHaveBeenCalled();
+    expect(projectsStoreMock.loadProjectsIfNeeded).toHaveBeenCalled();
+    expect(ordersStoreMock.loadOrdersIfNeeded).toHaveBeenCalled();
   });
 });

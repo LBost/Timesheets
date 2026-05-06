@@ -14,7 +14,7 @@ import { HlmSheetImports } from '@spartan-ng/helm/sheet';
 import { ToastService } from '../../../core/feedback/toast.service';
 import { activeLookup, selectionFromValueChange } from '../../../shared/components/combobox-selection/combobox-selection.util';
 import { FeatureHeaderActionsComponent } from '../../../shared/components/feature-header-actions/feature-header-actions.component';
-import { ProjectsRepository } from '../../projects/data/projects.repository';
+import { ProjectsStore } from '../../projects/state/projects.store';
 import { OrderCreateInput, OrderUpdateInput } from '../models/order.model';
 import { OrdersStore } from '../state/orders.store';
 import { OrderSheetFormComponent } from './components/order-sheet-form.component';
@@ -39,7 +39,10 @@ import { OrdersTableComponent } from './components/orders-table.component';
           title="Orders"
           subtitle="Optional booking layer between projects and time entries."
           addAriaLabel="Add order"
+          [showRefresh]="true"
+          refreshAriaLabel="Refresh orders"
           (addRequested)="openAddMode()"
+          (refreshRequested)="refreshOrders()"
         />
           <button
             #sheetOpenButton
@@ -97,7 +100,7 @@ import { OrdersTableComponent } from './components/orders-table.component';
 })
 export class OrdersPage implements OnInit {
   protected readonly store = inject(OrdersStore);
-  private readonly projectsRepository = inject(ProjectsRepository);
+  private readonly projectsStore = inject(ProjectsStore);
   private readonly formBuilder = inject(FormBuilder);
   private readonly toast = inject(ToastService);
   @ViewChild('sheetOpenButton', { read: ElementRef })
@@ -106,7 +109,14 @@ export class OrdersPage implements OnInit {
   private readonly sheetCloseButton?: ElementRef<HTMLButtonElement>;
   protected readonly selectedId = signal<number | null>(null);
   protected readonly isEditing = computed(() => this.selectedId() !== null);
-  protected readonly projectOptions = signal<Array<{ id: number; label: string }>>([]);
+  protected readonly projectOptions = computed<Array<{ id: number; label: string }>>(() =>
+    activeLookup(this.projectsStore.projects())
+      .filter((project) => project.useOrders)
+      .map((project) => ({
+        id: project.id,
+        label: `${project.code} · ${project.name}`,
+      })),
+  );
   protected readonly statusOptions: ReadonlyArray<{ label: string; value: boolean }> = [
     { label: 'Active', value: true },
     { label: 'Inactive', value: false },
@@ -128,16 +138,10 @@ export class OrdersPage implements OnInit {
 
   async ngOnInit(): Promise<void> {
     try {
-      const projects = await this.projectsRepository.listProjects();
-      this.projectOptions.set(
-        activeLookup(projects)
-          .filter((project) => project.useOrders)
-          .map((project) => ({
-            id: project.id,
-            label: `${project.code} · ${project.name}`,
-          })),
-      );
-      await this.store.loadOrders();
+      await Promise.all([
+        this.projectsStore.loadProjectsIfNeeded(),
+        this.store.loadOrdersIfNeeded(),
+      ]);
     } finally {
       this.hasInitialLoadCompleted.set(true);
     }
@@ -205,6 +209,13 @@ export class OrdersPage implements OnInit {
     }
     if (deleted) {
       this.toast.show('Order deleted.', 'success');
+    }
+  }
+
+  protected async refreshOrders(): Promise<void> {
+    await Promise.all([this.projectsStore.loadProjects(), this.store.loadOrders()]);
+    if (!this.store.error() && !this.projectsStore.error()) {
+      this.toast.show('Orders refreshed.', 'success');
     }
   }
 
