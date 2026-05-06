@@ -47,16 +47,6 @@ import { HlmSidebarTrigger } from '@spartan-ng/helm/sidebar';
         >
           <ng-icon name="lucideBell" hlm class="size-4" aria-hidden="true" />
         </button>
-        <button
-          hlmBtn
-          type="button"
-          size="icon"
-          variant="ghost"
-          class="cursor-pointer"
-          aria-label="Open settings"
-        >
-          <ng-icon name="lucideSettings" hlm class="size-4" aria-hidden="true" />
-        </button>
         @if (currentUserEmail()) {
           <span class="hidden text-xs text-muted-foreground sm:inline">
             {{ currentUserEmail() }}
