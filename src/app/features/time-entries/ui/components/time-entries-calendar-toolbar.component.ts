@@ -11,18 +11,35 @@ import { HlmIcon } from '@spartan-ng/helm/icon';
     <header class="flex flex-wrap items-end justify-between gap-3">
       <div>
         <h1 class="text-2xl font-semibold">Time Entries</h1>
-        <p class="text-sm text-muted-foreground">Plan monthly entries and register multiple time entries per day.</p>
+        <p class="text-sm text-muted-foreground">
+          Plan monthly entries and register multiple time entries per day.
+        </p>
       </div>
       <div class="flex items-center gap-2">
-        <button hlmBtn variant="outline" type="button" (click)="previousMonth.emit()">&lt;</button>
+        <button
+          hlmBtn
+          variant="outline"
+          type="button"
+          class="cursor-pointer"
+          (click)="previousMonth.emit()"
+        >
+          &lt;
+        </button>
         <input
           hlmInput
           type="month"
-          class="w-44"
           [value]="selectedMonthValue()"
           (change)="monthInputChange.emit($event)"
         />
-        <button hlmBtn variant="outline" type="button" (click)="nextMonth.emit()">&gt;</button>
+        <button
+          hlmBtn
+          variant="outline"
+          type="button"
+          class="cursor-pointer"
+          (click)="nextMonth.emit()"
+        >
+          &gt;
+        </button>
         <button
           hlmBtn
           type="button"
