@@ -85,7 +85,7 @@ type WeekDay = {
           </p>
         }
 
-        <app-time-entries-month-summary [monthLabel]="periodLabel()" [monthTotalHours]="store.monthTotalHours()" />
+        <app-time-entries-month-summary [monthLabel]="periodLabel()" [monthTotalHours]="periodTotalHours()" />
 
         @if (store.isLoading()) {
           <div class="grid gap-2 rounded-lg border border-border p-4">
@@ -222,6 +222,12 @@ export class TimeEntriesPage implements OnInit {
   protected readonly periodLabel = computed(() =>
     this.viewMode() === 'month' ? this.monthLabel() : this.selectedWeekLabel(),
   );
+  protected readonly periodTotalHours = computed(() => {
+    if (this.viewMode() === 'month') {
+      return this.store.monthTotalHours();
+    }
+    return this.weekDays().reduce((total, day) => total + this.dayTotal(day.date), 0);
+  });
   protected readonly selectedWeekValue = computed(() => this.toWeekInputValue(this.selectedWeekStart()));
   protected readonly selectedWeekLabel = computed(() => {
     const weekStart = this.selectedWeekStart();
