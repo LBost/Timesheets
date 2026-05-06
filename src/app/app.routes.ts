@@ -1,12 +1,6 @@
 import { Routes } from '@angular/router';
 import { AppShellComponent } from './core/layout/app-shell.component';
 import { authGuard, guestGuard } from './features/auth/auth.guard';
-import { ClientsPage } from './features/clients/ui/clients.page';
-import { DashboardPage } from './features/dashboard/dashboard.page';
-import { OrdersPage } from './features/orders/ui/orders.page';
-import { ProjectsPage } from './features/projects/ui/projects.page';
-import { SettingsPage } from './features/settings/ui/settings.page';
-import { TimeEntriesPage } from './features/time-entries/ui/time-entries.page';
 
 export const routes: Routes = [
   {
@@ -20,12 +14,36 @@ export const routes: Routes = [
     component: AppShellComponent,
     canActivate: [authGuard],
     children: [
-      { path: '', component: DashboardPage },
-      { path: 'time-entries', component: TimeEntriesPage },
-      { path: 'clients', component: ClientsPage },
-      { path: 'projects', component: ProjectsPage },
-      { path: 'orders', component: OrdersPage },
-      { path: 'settings', component: SettingsPage }
+      {
+        path: '',
+        loadComponent: () =>
+          import('./features/dashboard/dashboard.page').then((module) => module.DashboardPage),
+      },
+      {
+        path: 'time-entries',
+        loadComponent: () =>
+          import('./features/time-entries/ui/time-entries.page').then((module) => module.TimeEntriesPage),
+      },
+      {
+        path: 'clients',
+        loadComponent: () =>
+          import('./features/clients/ui/clients.page').then((module) => module.ClientsPage),
+      },
+      {
+        path: 'projects',
+        loadComponent: () =>
+          import('./features/projects/ui/projects.page').then((module) => module.ProjectsPage),
+      },
+      {
+        path: 'orders',
+        loadComponent: () =>
+          import('./features/orders/ui/orders.page').then((module) => module.OrdersPage),
+      },
+      {
+        path: 'settings',
+        loadComponent: () =>
+          import('./features/settings/ui/settings.page').then((module) => module.SettingsPage),
+      },
     ]
   }
 ];
