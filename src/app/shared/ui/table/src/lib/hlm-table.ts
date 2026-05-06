@@ -34,7 +34,7 @@ export class HlmTable {
 })
 export class HlmTHead {
 	constructor() {
-		classes(() => '[&_tr]:border-b');
+		classes(() => '[&_tr]:border-b [&_tr]:border-border');
 	}
 }
 
@@ -62,7 +62,7 @@ export class HlmTBody {
 })
 export class HlmTFoot {
 	constructor() {
-		classes(() => 'bg-muted/50 border-t font-medium [&>tr]:last:border-b-0');
+		classes(() => 'bg-muted/50 border-t border-border font-medium [&>tr]:last:border-b-0');
 	}
 }
 
@@ -76,7 +76,10 @@ export class HlmTFoot {
 })
 export class HlmTr {
 	constructor() {
-		classes(() => 'hover:bg-muted/50 data-[state=selected]:bg-muted border-b transition-colors has-aria-expanded:bg-muted/50');
+		classes(
+			() =>
+				'hover:bg-muted/50 data-[state=selected]:bg-muted border-b border-border transition-colors has-aria-expanded:bg-muted/50',
+		);
 	}
 }
 
