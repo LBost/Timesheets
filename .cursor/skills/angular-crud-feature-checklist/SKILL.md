@@ -12,7 +12,7 @@ Use this checklist to keep feature work consistent and merge-ready.
 ```md
 CRUD Feature Progress:
 - [ ] Confirm entity contracts (model/create/update/vm)
-- [ ] Align Drizzle schema and generate migration if data shape changed
+- [ ] Align Drizzle schema + migration and update Supabase companion SQL (`db/policies.sql`) if data shape changed
 - [ ] Implement or update mapper normalization and payload helpers
 - [ ] Implement or update repository CRUD and guardrails
 - [ ] Implement or update signal store state/computed/methods
@@ -26,6 +26,7 @@ CRUD Feature Progress:
 
 - Keep page files as orchestration containers.
 - Keep persistence access in repositories.
+- Use Supabase client (`SUPABASE_CLIENT`) in repositories for runtime data access.
 - Reuse Spartan wrappers from `src/app/shared/ui/`.
 - Place app-level reusable view components in `src/app/shared/components/`.
 

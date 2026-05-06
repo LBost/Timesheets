@@ -98,14 +98,19 @@ export function toEntityUpdateValues(input: EntityUpdateInput) {
 ## 4) Repository template
 
 ```ts
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
+import { SupabaseClient } from '@supabase/supabase-js';
+import { SUPABASE_CLIENT } from '../../../core/supabase/supabase.client';
 import { EntityCreateInput, EntityUpdateInput } from '../models/entity.model';
 import { EntityVM } from '../models/entity.vm';
 import { EntityRecord, toEntityInsertValues, toEntityModel, toEntityUpdateValues, toEntityVM } from './entity.mapper';
 
 @Injectable({ providedIn: 'root' })
 export class EntitiesRepository {
+  private readonly supabase: SupabaseClient = inject(SUPABASE_CLIENT);
+
   async listEntities(): Promise<EntityVM[]> {
+    // Query Supabase and map rows to VM
     return [];
   }
 

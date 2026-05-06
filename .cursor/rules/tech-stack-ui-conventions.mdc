@@ -11,13 +11,15 @@ alwaysApply: true
 - Styling: Tailwind utility classes as default.
 - UI primitives/components: Spartan (`@spartan-ng/helm` + local wrappers in `src/app/shared/ui/*`).
 - State pattern: feature stores using `@ngrx/signals`.
-- Persistence and schema: Drizzle ORM (`drizzle-orm` + `drizzle-kit`) with repository abstraction.
+- Runtime persistence: Supabase (`@supabase/supabase-js`) with Auth + Postgres + RLS.
+- Schema/migrations: Drizzle ORM (`drizzle-orm` + `drizzle-kit`) with repository abstraction.
 
 ## Data and state conventions
 
 - Use Signal Store (`signalStore`, `withState`, `withComputed`, `withMethods`) for feature state management.
 - Keep async CRUD and mutation orchestration in feature stores, not in templates.
 - Keep persistence access in repository classes; page and presentational components must not access storage directly.
+- Use Supabase client in repositories for runtime CRUD; keep `user_id` ownership aligned with RLS.
 - Use Drizzle schema/migrations for data model evolution and keep model/mapper/repository contracts aligned.
 - Current form baseline is reactive forms. For future Angular upgrades, periodically re-evaluate Angular Signal Forms (experimental in Angular 21+) for fit, migration effort, and stability before adopting.
 

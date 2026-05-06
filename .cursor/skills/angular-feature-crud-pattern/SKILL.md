@@ -70,6 +70,7 @@ Keep all normalization logic centralized in mapper helpers.
 
 In `<entity>.repository.ts`:
 
+- Inject `SUPABASE_CLIENT` and keep all runtime CRUD in Supabase queries.
 - Expose:
   - `list...()`
   - `get...ById(id)`
@@ -78,6 +79,7 @@ In `<entity>.repository.ts`:
   - `archive...(id)` (soft delete via `isActive=false`) when relevant
 - Enforce business guardrails (uniqueness, active-child constraints)
 - Return VM-level data to callers
+- Ensure inserts/updates respect `user_id` ownership semantics used by RLS policies.
 
 The page should never access persistence directly.
 

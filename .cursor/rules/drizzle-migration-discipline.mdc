@@ -6,6 +6,7 @@ alwaysApply: true
 # Drizzle Migration Discipline
 
 - When changing persisted data shape, update `db/schema.ts` and generate a migration with Drizzle.
+- Keep Supabase runtime SQL companion changes aligned (e.g. `db/policies.sql` for RLS/auth FK constraints).
 - Keep schema, model contracts, mapper functions, and repository logic aligned in the same change set.
 - Avoid schema-only or UI-only partial changes that break contract parity.
 - Prefer explicit migration files over ad-hoc runtime adjustments.
