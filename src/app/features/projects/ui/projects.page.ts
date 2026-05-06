@@ -84,7 +84,7 @@ import { ProjectsTableComponent } from './components/projects-table.component';
       <app-projects-feedback-state
         [clientLookupError]="clientLookupError()"
         [storeError]="store.error()"
-        [isLoading]="showLoadingSkeleton()"
+        [isLoading]="showLoadingSpinner()"
       />
       <app-projects-table
         [projects]="store.projects()"
@@ -128,7 +128,7 @@ export class ProjectsPage implements OnInit {
   protected readonly clientLookupError = signal<string | null>(null);
   protected readonly selectedClientOption = signal<{ id: number; label: string } | null>(null);
   private readonly hasInitialLoadCompleted = signal(false);
-  protected readonly showLoadingSkeleton = computed(
+  protected readonly showLoadingSpinner = computed(
     () => !this.hasInitialLoadCompleted() && this.store.isLoading(),
   );
 

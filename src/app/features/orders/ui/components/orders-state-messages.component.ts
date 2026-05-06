@@ -1,9 +1,9 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
-import { HlmSkeletonImports } from '@spartan-ng/helm/skeleton';
+import { HlmSpinnerImports } from '@spartan-ng/helm/spinner';
 
 @Component({
   selector: 'app-orders-state-messages',
-  imports: [HlmSkeletonImports],
+  imports: [HlmSpinnerImports],
   template: `
     @if (projectLookupError()) {
       <p class="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
@@ -16,10 +16,8 @@ import { HlmSkeletonImports } from '@spartan-ng/helm/skeleton';
       </p>
     }
     @if (isLoading()) {
-      <div class="grid gap-2 rounded-lg border border-border p-4">
-        <div hlmSkeleton class="h-5 w-1/3"></div>
-        <div hlmSkeleton class="h-4 w-full"></div>
-        <div hlmSkeleton class="h-4 w-5/6"></div>
+      <div class="flex items-center justify-center rounded-lg border border-border p-6">
+        <hlm-spinner aria-label="Loading orders" class="text-muted-foreground"></hlm-spinner>
       </div>
     }
   `,

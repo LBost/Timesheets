@@ -11,7 +11,7 @@ import {
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HlmSeparatorImports } from '@spartan-ng/helm/separator';
 import { HlmSheetImports } from '@spartan-ng/helm/sheet';
-import { HlmSkeletonImports } from '@spartan-ng/helm/skeleton';
+import { HlmSpinnerImports } from '@spartan-ng/helm/spinner';
 import { ToastService } from '../../../core/feedback/toast.service';
 import { activeLookup } from '../../../shared/components/combobox-selection/combobox-selection.util';
 import { resolveClientAccentHex } from '../../../shared/components/client-accent/client-accent.util';
@@ -51,7 +51,7 @@ type WeekDay = {
     ReactiveFormsModule,
     HlmSeparatorImports,
     HlmSheetImports,
-    HlmSkeletonImports,
+    HlmSpinnerImports,
     TimeEntriesCalendarToolbarComponent,
     TimeEntriesMonthSummaryComponent,
     TimeEntriesCalendarGridComponent,
@@ -89,11 +89,9 @@ type WeekDay = {
 
         <app-time-entries-month-summary [monthLabel]="periodLabel()" [monthTotalHours]="periodTotalHours()" />
 
-        @if (showLoadingSkeleton()) {
-          <div class="grid gap-2 rounded-lg border border-border p-4">
-            <div hlmSkeleton class="h-5 w-1/4"></div>
-            <div hlmSkeleton class="h-4 w-full"></div>
-            <div hlmSkeleton class="h-4 w-full"></div>
+        @if (showLoadingSpinner()) {
+          <div class="flex items-center justify-center rounded-lg border border-border p-6">
+            <hlm-spinner aria-label="Loading time entries" class="text-muted-foreground"></hlm-spinner>
           </div>
         }
 
@@ -213,7 +211,7 @@ export class TimeEntriesPage implements OnInit {
   protected readonly weekdayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   protected readonly viewMode = signal<'month' | 'week'>('month');
   private readonly hasInitialLoadCompleted = signal(false);
-  protected readonly showLoadingSkeleton = computed(
+  protected readonly showLoadingSpinner = computed(
     () => !this.hasInitialLoadCompleted() && this.store.isLoading(),
   );
   protected readonly selectedWeekStart = signal(this.startOfWeek(new Date()));

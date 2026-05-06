@@ -85,7 +85,7 @@ import { OrdersTableComponent } from './components/orders-table.component';
       <app-orders-state-messages
         [projectLookupError]="projectLookupError()"
         [storeError]="store.error()"
-        [isLoading]="showLoadingSkeleton()"
+        [isLoading]="showLoadingSpinner()"
       />
       <app-orders-table
         [orders]="store.orders()"
@@ -124,7 +124,7 @@ export class OrdersPage implements OnInit {
   protected readonly projectLookupError = signal<string | null>(null);
   protected readonly selectedProjectOption = signal<{ id: number; label: string } | null>(null);
   private readonly hasInitialLoadCompleted = signal(false);
-  protected readonly showLoadingSkeleton = computed(
+  protected readonly showLoadingSpinner = computed(
     () => !this.hasInitialLoadCompleted() && this.store.isLoading(),
   );
   private selectedProjectId: number | null = null;

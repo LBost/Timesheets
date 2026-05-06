@@ -81,7 +81,7 @@ import { ClientsTableComponent } from './components/clients-table.component';
 
       <app-clients-feedback-state
         [storeError]="store.error()"
-        [isLoading]="showLoadingSkeleton()"
+        [isLoading]="showLoadingSpinner()"
       />
 
       <app-clients-table
@@ -112,7 +112,7 @@ export class ClientsPage implements OnInit {
     { label: 'Inactive', value: false },
   ];
   private readonly hasInitialLoadCompleted = signal(false);
-  protected readonly showLoadingSkeleton = computed(
+  protected readonly showLoadingSpinner = computed(
     () => !this.hasInitialLoadCompleted() && this.store.isLoading(),
   );
 
