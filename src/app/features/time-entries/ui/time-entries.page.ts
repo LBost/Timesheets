@@ -27,6 +27,7 @@ import { TimeEntryCreateInput, TimeEntryUpdateInput } from '../models/time-entry
 import { TimeEntriesStore } from '../state/time-entries.store';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideLayers, lucidePlus } from '@ng-icons/lucide';
+import { HlmIcon } from '@spartan-ng/helm/icon';
 
 type ClientOption = { id: number; label: string };
 type ProjectOption = { id: number; clientId: number; label: string; useOrders: boolean };
@@ -50,6 +51,7 @@ type CalendarDay = {
     HlmSkeletonImports,
     HlmDialogImports,
     NgIcon,
+    HlmIcon,
     CrudSheetFooterComponent,
   ],
   providers: [provideIcons({ lucidePlus, lucideLayers })],
@@ -73,7 +75,17 @@ type CalendarDay = {
               (change)="onMonthInputChange($event)"
             />
             <button hlmBtn variant="outline" type="button" (click)="nextMonth()">&gt;</button>
-            <button hlmBtn type="button" (click)="openAddForDate(todayIso())">Add entry</button>
+            <button
+              hlmBtn
+              type="button"
+              size="icon"
+              variant="outline"
+              class="cursor-pointer"
+              [attr.aria-label]="'Add entry for ' + todayIso()"
+              (click)="openAddForDate(todayIso())"
+            >
+              <ng-icon hlm size="sm" name="lucidePlus" />
+            </button>
           </div>
         </header>
 
@@ -128,7 +140,7 @@ type CalendarDay = {
                       class="cursor-pointer"
                       (click)="openAddForDate(day.date)"
                     >
-                      <ng-icon hlm name="lucidePlus" aria-hidden="true" />
+                      <ng-icon hlm name="lucidePlus" size="sm" aria-hidden="true" />
                     </button>
                   }
                 </div>
@@ -142,7 +154,7 @@ type CalendarDay = {
                     @let entry = entries[0];
                     <button
                       type="button"
-                      class="w-full rounded border border-border/50 border-l-[3px] bg-card px-2 py-1 text-left text-[11px] leading-tight hover:bg-accent"
+                      class="w-full rounded border border-border/50 border-l-[3px] bg-card px-2 py-1 text-left text-[11px] leading-tight hover:bg-accent cursor-pointer"
                       [style.border-left-color]="entryClientAccent(entry)"
                       (click)="editEntry(entry.id)"
                     >
@@ -156,7 +168,7 @@ type CalendarDay = {
                   } @else if (entries.length > 1) {
                     <button
                       type="button"
-                      class="relative mt-0.5 w-full touch-manipulation text-left outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+                      class="relative mt-0.5 w-full touch-manipulation text-left outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
                       (click)="openDayEntriesPicker(day.date)"
                       [attr.aria-label]="
                         'View ' + entries.length + ' entries on ' + formatDayHeading(day.date)
@@ -174,17 +186,20 @@ type CalendarDay = {
                         class="relative z-20 flex h-10 items-center justify-between gap-2 rounded-md border border-border bg-card px-2 py-1 text-[11px] shadow-sm"
                       >
                         <span class="flex min-w-0 flex-1 items-center gap-1.5 font-medium">
-                          @for (
-                            accent of entryAccentsForDate(day.date);
-                            track accent.key
-                          ) {
+                          @for (accent of entryAccentsForDate(day.date); track accent.key) {
                             <span
                               class="size-2 shrink-0 rounded-full ring-1 ring-border/50"
                               [style.background-color]="accent.hex"
                               [attr.title]="accent.label"
                             ></span>
                           }
-                          <ng-icon hlm name="lucideLayers" class="size-3.5 shrink-0 opacity-80" aria-hidden="true" />
+                          <ng-icon
+                            hlm
+                            name="lucideLayers"
+                            size="sm"
+                            class="size-3.5 shrink-0 opacity-80"
+                            aria-hidden="true"
+                          />
                           <span class="truncate">{{ entries.length }} entries</span>
                         </span>
                         <span class="shrink-0 text-muted-foreground">
@@ -354,7 +369,9 @@ type CalendarDay = {
               class="max-h-[min(70vh,520px)] gap-0 overflow-hidden p-0 sm:max-w-md"
             >
               @if (dayEntriesPickerDate(); as pickerDate) {
-                <hlm-dialog-header class="border-b border-border/40 px-4 pb-3 pe-14 pt-4 text-start">
+                <hlm-dialog-header
+                  class="border-b border-border/40 px-4 pb-3 pe-14 pt-4 text-start"
+                >
                   <h2 hlmDialogTitle class="text-base">{{ formatDayHeading(pickerDate) }}</h2>
                   <p hlmDialogDescription class="text-xs">
                     {{ entriesForDate(pickerDate).length }} entries ·
