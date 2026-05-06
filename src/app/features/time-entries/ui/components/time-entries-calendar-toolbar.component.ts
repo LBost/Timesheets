@@ -16,27 +16,59 @@ import { HlmIcon } from '@spartan-ng/helm/icon';
         </p>
       </div>
       <div class="flex items-center gap-2">
+        <div class="inline-flex items-center rounded-md border border-border p-1">
+          <button
+            hlmBtn
+            type="button"
+            size="sm"
+            variant="ghost"
+            [class.bg-accent]="viewMode() === 'month'"
+            (click)="viewModeChange.emit('month')"
+          >
+            Month
+          </button>
+          <button
+            hlmBtn
+            type="button"
+            size="sm"
+            variant="ghost"
+            [class.bg-accent]="viewMode() === 'week'"
+            (click)="viewModeChange.emit('week')"
+          >
+            Week
+          </button>
+        </div>
         <button
           hlmBtn
           variant="outline"
           type="button"
           class="cursor-pointer"
-          (click)="previousMonth.emit()"
+          (click)="previousPeriod.emit()"
         >
           &lt;
         </button>
-        <input
-          hlmInput
-          type="month"
-          [value]="selectedMonthValue()"
-          (change)="monthInputChange.emit($event)"
-        />
+        @if (viewMode() === 'month') {
+          <input
+            hlmInput
+            type="month"
+            [value]="selectedMonthValue()"
+            (change)="monthInputChange.emit($event)"
+          />
+        } @else {
+          <input
+            hlmInput
+            type="week"
+            class="[&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-90"
+            [value]="selectedWeekValue()"
+            (change)="weekInputChange.emit($event)"
+          />
+        }
         <button
           hlmBtn
           variant="outline"
           type="button"
           class="cursor-pointer"
-          (click)="nextMonth.emit()"
+          (click)="nextPeriod.emit()"
         >
           &gt;
         </button>
@@ -57,10 +89,14 @@ import { HlmIcon } from '@spartan-ng/helm/icon';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TimeEntriesCalendarToolbarComponent {
+  readonly viewMode = input.required<'month' | 'week'>();
   readonly selectedMonthValue = input.required<string>();
+  readonly selectedWeekValue = input.required<string>();
   readonly todayIso = input.required<string>();
-  readonly previousMonth = output<void>();
-  readonly nextMonth = output<void>();
+  readonly previousPeriod = output<void>();
+  readonly nextPeriod = output<void>();
   readonly monthInputChange = output<Event>();
+  readonly weekInputChange = output<Event>();
   readonly addToday = output<void>();
+  readonly viewModeChange = output<'month' | 'week'>();
 }

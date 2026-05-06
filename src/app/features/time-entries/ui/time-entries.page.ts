@@ -21,12 +21,13 @@ import { ProjectsRepository } from '../../projects/data/projects.repository';
 import { TimeEntryCreateInput, TimeEntryUpdateInput } from '../models/time-entry.model';
 import { TimeEntriesStore } from '../state/time-entries.store';
 import { provideIcons } from '@ng-icons/core';
-import { lucideLayers, lucidePlus } from '@ng-icons/lucide';
+import { lucideCalendar, lucideLayers, lucidePlus } from '@ng-icons/lucide';
 import { TimeEntriesCalendarToolbarComponent } from './components/time-entries-calendar-toolbar.component';
 import { TimeEntriesMonthSummaryComponent } from './components/time-entries-month-summary.component';
 import { TimeEntriesCalendarGridComponent } from './components/time-entries-calendar-grid.component';
 import { TimeEntriesDayPickerDialogComponent } from './components/time-entries-day-picker-dialog.component';
 import { TimeEntrySheetFormComponent } from './components/time-entry-sheet-form.component';
+import { TimeEntriesWeekGridComponent } from './components/time-entries-week-grid.component';
 
 type ClientOption = { id: number; label: string };
 type ProjectOption = { id: number; clientId: number; label: string; useOrders: boolean };
@@ -36,6 +37,11 @@ type CalendarDay = {
   date: string | null;
   dayNumber: number;
   inCurrentMonth: boolean;
+};
+
+type WeekDay = {
+  date: string;
+  dayNumber: number;
 };
 
 @Component({
@@ -48,20 +54,25 @@ type CalendarDay = {
     TimeEntriesCalendarToolbarComponent,
     TimeEntriesMonthSummaryComponent,
     TimeEntriesCalendarGridComponent,
+    TimeEntriesWeekGridComponent,
     TimeEntriesDayPickerDialogComponent,
     TimeEntrySheetFormComponent,
   ],
-  providers: [provideIcons({ lucidePlus, lucideLayers })],
+  providers: [provideIcons({ lucidePlus, lucideLayers, lucideCalendar })],
   template: `
     <hlm-sheet>
       <section class="mx-auto flex w-full max-w-7xl flex-col gap-5">
         <app-time-entries-calendar-toolbar
+          [viewMode]="viewMode()"
           [selectedMonthValue]="selectedMonthValue()"
+          [selectedWeekValue]="selectedWeekValue()"
           [todayIso]="todayIso()"
-          (previousMonth)="previousMonth()"
-          (nextMonth)="nextMonth()"
+          (previousPeriod)="previousPeriod()"
+          (nextPeriod)="nextPeriod()"
           (monthInputChange)="onMonthInputChange($event)"
+          (weekInputChange)="onWeekInputChange($event)"
           (addToday)="openAddForDate(todayIso())"
+          (viewModeChange)="onViewModeChange($event)"
         />
 
         <div hlmSeparator></div>
@@ -74,7 +85,7 @@ type CalendarDay = {
           </p>
         }
 
-        <app-time-entries-month-summary [monthLabel]="monthLabel()" [monthTotalHours]="store.monthTotalHours()" />
+        <app-time-entries-month-summary [monthLabel]="periodLabel()" [monthTotalHours]="store.monthTotalHours()" />
 
         @if (store.isLoading()) {
           <div class="grid gap-2 rounded-lg border border-border p-4">
@@ -84,18 +95,30 @@ type CalendarDay = {
           </div>
         }
 
-        <app-time-entries-calendar-grid
-          [weekdayLabels]="weekdayLabels"
-          [calendarDays]="calendarDays()"
-          [entriesForDate]="entriesForDateFn"
-          [dayTotal]="dayTotalFn"
-          [entryClientAccent]="entryClientAccentFn"
-          [entryAccentsForDate]="entryAccentsForDateFn"
-          [formatDayHeading]="formatDayHeadingFn"
-          (addForDate)="openAddForDate($event)"
-          (editEntry)="editEntry($event)"
-          (openDayEntriesPicker)="openDayEntriesPicker($event)"
-        />
+        @if (viewMode() === 'month') {
+          <app-time-entries-calendar-grid
+            [weekdayLabels]="weekdayLabels"
+            [calendarDays]="calendarDays()"
+            [entriesForDate]="entriesForDateFn"
+            [dayTotal]="dayTotalFn"
+            [entryClientAccent]="entryClientAccentFn"
+            [entryAccentsForDate]="entryAccentsForDateFn"
+            [formatDayHeading]="formatDayHeadingFn"
+            (addForDate)="openAddForDate($event)"
+            (editEntry)="editEntry($event)"
+            (openDayEntriesPicker)="openDayEntriesPicker($event)"
+          />
+        } @else {
+          <app-time-entries-week-grid
+            [weekDays]="weekDays()"
+            [entriesForDate]="entriesForDateFn"
+            [dayTotal]="dayTotalFn"
+            [entryClientAccent]="entryClientAccentFn"
+            [formatDayHeading]="formatDayHeadingFn"
+            (addForDate)="openAddForDate($event)"
+            (editEntry)="editEntry($event)"
+          />
+        }
 
         <button #sheetOpenButton class="hidden" hlmSheetTrigger side="right" type="button"></button>
         <ng-template hlmSheetPortal>
@@ -170,6 +193,8 @@ export class TimeEntriesPage implements OnInit {
     return d ? `Entries for ${this.formatDayHeading(d)}` : '';
   });
   protected readonly weekdayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  protected readonly viewMode = signal<'month' | 'week'>('month');
+  protected readonly selectedWeekStart = signal(this.startOfWeek(new Date()));
   protected readonly entriesForDateFn = (date: string) => this.entriesForDate(date);
   protected readonly dayTotalFn = (date: string) => this.dayTotal(date);
   protected readonly entryClientAccentFn = (entry: { clientId: number; clientAccentColor: string | null }) =>
@@ -194,6 +219,24 @@ export class TimeEntriesPage implements OnInit {
   protected readonly monthLabel = computed(() =>
     this.store.selectedMonth().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
   );
+  protected readonly periodLabel = computed(() =>
+    this.viewMode() === 'month' ? this.monthLabel() : this.selectedWeekLabel(),
+  );
+  protected readonly selectedWeekValue = computed(() => this.toWeekInputValue(this.selectedWeekStart()));
+  protected readonly selectedWeekLabel = computed(() => {
+    const weekStart = this.selectedWeekStart();
+    const weekNumber = this.isoWeekNumber(weekStart);
+    const isoYear = this.isoWeekYear(weekStart);
+    return `WK${String(weekNumber).padStart(2, '0')} ${isoYear}`;
+  });
+  protected readonly weekDays = computed<WeekDay[]>(() => {
+    const start = this.selectedWeekStart();
+    return Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(start);
+      date.setDate(start.getDate() + index);
+      return { date: this.toIsoDate(date), dayNumber: date.getDate() };
+    });
+  });
 
   protected readonly calendarDays = computed<CalendarDay[]>(() => {
     const month = this.store.selectedMonth();
@@ -304,14 +347,28 @@ export class TimeEntriesPage implements OnInit {
     return this.store.dayTotals()[date] ?? 0;
   }
 
-  protected previousMonth(): void {
+  protected previousPeriod(): void {
     this.closeDayEntriesPicker();
-    void this.store.goToPreviousMonth();
+    if (this.viewMode() === 'month') {
+      void this.store.goToPreviousMonth();
+      return;
+    }
+    const current = this.selectedWeekStart();
+    const previous = new Date(current);
+    previous.setDate(current.getDate() - 7);
+    this.selectedWeekStart.set(this.startOfWeek(previous));
   }
 
-  protected nextMonth(): void {
+  protected nextPeriod(): void {
     this.closeDayEntriesPicker();
-    void this.store.goToNextMonth();
+    if (this.viewMode() === 'month') {
+      void this.store.goToNextMonth();
+      return;
+    }
+    const current = this.selectedWeekStart();
+    const next = new Date(current);
+    next.setDate(current.getDate() + 7);
+    this.selectedWeekStart.set(this.startOfWeek(next));
   }
 
   protected onMonthInputChange(event: Event): void {
@@ -327,6 +384,25 @@ export class TimeEntriesPage implements OnInit {
       return;
     }
     void this.store.setSelectedMonth(new Date(year, month - 1, 1));
+  }
+
+  protected onWeekInputChange(event: Event): void {
+    this.closeDayEntriesPicker();
+    const value = (event.target as HTMLInputElement).value;
+    const parsed = this.fromWeekInputValue(value);
+    if (!parsed) {
+      return;
+    }
+    this.selectedWeekStart.set(parsed);
+  }
+
+  protected onViewModeChange(mode: 'month' | 'week'): void {
+    this.viewMode.set(mode);
+    this.closeDayEntriesPicker();
+    if (mode === 'week') {
+      const monthAnchor = this.store.selectedMonth();
+      this.selectedWeekStart.set(this.startOfWeek(monthAnchor));
+    }
   }
 
   protected openAddForDate(date: string): void {
@@ -525,6 +601,54 @@ export class TimeEntriesPage implements OnInit {
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+  }
+
+  private startOfWeek(date: Date): Date {
+    const next = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const dayOfWeek = (next.getDay() + 6) % 7;
+    next.setDate(next.getDate() - dayOfWeek);
+    return next;
+  }
+
+  private toWeekInputValue(date: Date): string {
+    const isoYear = this.isoWeekYear(date);
+    const week = this.isoWeekNumber(date);
+    return `${isoYear}-W${String(week).padStart(2, '0')}`;
+  }
+
+  private fromWeekInputValue(value: string): Date | null {
+    const match = /^(\d{4})-W(\d{2})$/.exec(value);
+    if (!match) {
+      return null;
+    }
+    const year = Number(match[1]);
+    const week = Number(match[2]);
+    if (!Number.isFinite(year) || !Number.isFinite(week) || week < 1 || week > 53) {
+      return null;
+    }
+    const jan4 = new Date(year, 0, 4);
+    const week1Start = this.startOfWeek(jan4);
+    const result = new Date(week1Start);
+    result.setDate(week1Start.getDate() + (week - 1) * 7);
+    return result;
+  }
+
+  private isoWeekYear(date: Date): number {
+    const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
+    return d.getFullYear();
+  }
+
+  private isoWeekNumber(date: Date): number {
+    const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
+    const firstThursday = new Date(d.getFullYear(), 0, 4);
+    const firstThursdayAdjusted = new Date(firstThursday);
+    firstThursdayAdjusted.setDate(
+      firstThursday.getDate() + 3 - ((firstThursday.getDay() + 6) % 7),
+    );
+    const diffMs = d.getTime() - firstThursdayAdjusted.getTime();
+    return 1 + Math.round(diffMs / 604800000);
   }
 
   private autoSelectSingleCascadeOptions(): void {
