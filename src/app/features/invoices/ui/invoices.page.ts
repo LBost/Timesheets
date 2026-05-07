@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnInit,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmComboboxImports } from '@spartan-ng/helm/combobox';
@@ -18,7 +25,13 @@ import { InvoicesStore } from '../state/invoices.store';
 
 @Component({
   selector: 'app-invoices-page',
-  imports: [ReactiveFormsModule, HlmButtonImports, HlmInputImports, HlmSeparatorImports, HlmComboboxImports],
+  imports: [
+    ReactiveFormsModule,
+    HlmButtonImports,
+    HlmInputImports,
+    HlmSeparatorImports,
+    HlmComboboxImports,
+  ],
   template: `
     <section class="mx-auto flex w-full max-w-6xl flex-col gap-6">
       <header class="space-y-1">
@@ -30,7 +43,11 @@ import { InvoicesStore } from '../state/invoices.store';
 
       <div hlmSeparator></div>
 
-      <form class="grid gap-3 rounded-lg border border-border p-4" [formGroup]="generationForm" (ngSubmit)="generate()">
+      <form
+        class="grid gap-3 rounded-lg border border-border p-4"
+        [formGroup]="generationForm"
+        (ngSubmit)="generate()"
+      >
         <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
           <label class="grid gap-1 text-sm">
             <span>Client *</span>
@@ -45,11 +62,13 @@ import { InvoicesStore } from '../state/invoices.store';
                 <span>{{ selectedClientOption()?.label ?? 'Select client' }}</span>
               </hlm-combobox-trigger>
               <ng-template hlmComboboxPortal>
-                <div hlmComboboxContent><div hlmComboboxList>
-                  @for (client of clientOptions(); track client.id) {
-                    <hlm-combobox-item [value]="client">{{ client.label }}</hlm-combobox-item>
-                  }
-                </div></div>
+                <div hlmComboboxContent>
+                  <div hlmComboboxList>
+                    @for (client of clientOptions(); track client.id) {
+                      <hlm-combobox-item [value]="client">{{ client.label }}</hlm-combobox-item>
+                    }
+                  </div>
+                </div>
               </ng-template>
             </div>
           </label>
@@ -66,16 +85,18 @@ import { InvoicesStore } from '../state/invoices.store';
                 <span>{{ selectedBillingModelOption()?.label ?? 'Select billing model' }}</span>
               </hlm-combobox-trigger>
               <ng-template hlmComboboxPortal>
-                <div hlmComboboxContent><div hlmComboboxList>
-                  @for (option of billingModelOptions; track option.value) {
-                    <hlm-combobox-item [value]="option">{{ option.label }}</hlm-combobox-item>
-                  }
-                </div></div>
+                <div hlmComboboxContent>
+                  <div hlmComboboxList>
+                    @for (option of billingModelOptions; track option.value) {
+                      <hlm-combobox-item [value]="option">{{ option.label }}</hlm-combobox-item>
+                    }
+                  </div>
+                </div>
               </ng-template>
             </div>
           </label>
           <label class="grid gap-1 text-sm">
-            <span>Tax rate *</span>
+            <span>VAT rate *</span>
             <div
               hlmCombobox
               [value]="selectedTaxRateOption()"
@@ -87,11 +108,13 @@ import { InvoicesStore } from '../state/invoices.store';
                 <span>{{ selectedTaxRateOption()?.label ?? 'Select tax rate' }}</span>
               </hlm-combobox-trigger>
               <ng-template hlmComboboxPortal>
-                <div hlmComboboxContent><div hlmComboboxList>
-                  @for (taxRate of taxRateOptions(); track taxRate.id) {
-                    <hlm-combobox-item [value]="taxRate">{{ taxRate.label }}</hlm-combobox-item>
-                  }
-                </div></div>
+                <div hlmComboboxContent>
+                  <div hlmComboboxList>
+                    @for (taxRate of taxRateOptions(); track taxRate.id) {
+                      <hlm-combobox-item [value]="taxRate">{{ taxRate.label }}</hlm-combobox-item>
+                    }
+                  </div>
+                </div>
               </ng-template>
             </div>
           </label>
@@ -118,11 +141,13 @@ import { InvoicesStore } from '../state/invoices.store';
                 <span>{{ selectedInitialStatusOption()?.label ?? 'Select status' }}</span>
               </hlm-combobox-trigger>
               <ng-template hlmComboboxPortal>
-                <div hlmComboboxContent><div hlmComboboxList>
-                  @for (status of initialStatusOptions; track status.value) {
-                    <hlm-combobox-item [value]="status">{{ status.label }}</hlm-combobox-item>
-                  }
-                </div></div>
+                <div hlmComboboxContent>
+                  <div hlmComboboxList>
+                    @for (status of initialStatusOptions; track status.value) {
+                      <hlm-combobox-item [value]="status">{{ status.label }}</hlm-combobox-item>
+                    }
+                  </div>
+                </div>
               </ng-template>
             </div>
           </label>
@@ -139,17 +164,21 @@ import { InvoicesStore } from '../state/invoices.store';
                 <span>{{ selectedModeOption()?.label ?? 'Select mode' }}</span>
               </hlm-combobox-trigger>
               <ng-template hlmComboboxPortal>
-                <div hlmComboboxContent><div hlmComboboxList>
-                  @for (mode of modeOptions; track mode.value) {
-                    <hlm-combobox-item [value]="mode">{{ mode.label }}</hlm-combobox-item>
-                  }
-                </div></div>
+                <div hlmComboboxContent>
+                  <div hlmComboboxList>
+                    @for (mode of modeOptions; track mode.value) {
+                      <hlm-combobox-item [value]="mode">{{ mode.label }}</hlm-combobox-item>
+                    }
+                  </div>
+                </div>
               </ng-template>
             </div>
           </label>
         </div>
         <div class="flex items-center justify-end gap-2">
-          <button hlmBtn type="button" variant="outline" (click)="applySuggestedPeriod()">Suggest period</button>
+          <button hlmBtn type="button" variant="outline" (click)="applySuggestedPeriod()">
+            Suggest period
+          </button>
           <button hlmBtn type="submit" [disabled]="generationForm.invalid || store.isLoading()">
             Generate invoice(s)
           </button>
@@ -157,7 +186,9 @@ import { InvoicesStore } from '../state/invoices.store';
       </form>
 
       @if (store.error()) {
-        <p class="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+        <p
+          class="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
+        >
           {{ store.error() }}
         </p>
       }
@@ -172,12 +203,19 @@ import { InvoicesStore } from '../state/invoices.store';
               <div>
                 <p class="font-semibold">{{ invoice.invoiceNumber }} · {{ invoice.clientName }}</p>
                 <p class="text-sm text-muted-foreground">
-                  {{ invoice.periodStart }} - {{ invoice.periodEnd }} · {{ invoice.status }} · {{ invoice.lineItemCount }}
+                  {{ invoice.periodStart }} - {{ invoice.periodEnd }} · {{ invoice.status }} ·
+                  {{ invoice.lineItemCount }}
                   lines
                 </p>
               </div>
               <div class="flex flex-wrap gap-2">
-                <button hlmBtn type="button" variant="outline" size="sm" (click)="selectInvoice(invoice.id)">
+                <button
+                  hlmBtn
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  (click)="selectInvoice(invoice.id)"
+                >
                   Details
                 </button>
                 <button
@@ -185,10 +223,23 @@ import { InvoicesStore } from '../state/invoices.store';
                   type="button"
                   variant="secondary"
                   size="sm"
-                  [disabled]="invoice.status !== invoiceStatus.CONCEPT && invoice.status !== invoiceStatus.PROFORMA"
+                  [disabled]="
+                    invoice.status !== invoiceStatus.CONCEPT &&
+                    invoice.status !== invoiceStatus.PROFORMA
+                  "
                   (click)="setStatus(invoice.id, invoiceStatus.OPEN)"
                 >
                   Open
+                </button>
+                <button
+                  hlmBtn
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  [disabled]="invoice.status !== invoiceStatus.OPEN"
+                  (click)="setStatus(invoice.id, invoiceStatus.CONCEPT)"
+                >
+                  Revert
                 </button>
                 <button
                   hlmBtn
@@ -210,14 +261,28 @@ import { InvoicesStore } from '../state/invoices.store';
                 >
                   Credited
                 </button>
+                <button
+                  hlmBtn
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  [disabled]="
+                    invoice.status === invoiceStatus.PAID || invoice.status === invoiceStatus.CREDITED
+                  "
+                  (click)="deleteInvoice(invoice.id)"
+                >
+                  Delete
+                </button>
               </div>
             </div>
             @if (invoice.id === store.selectedInvoiceId()) {
               <div class="mt-3 space-y-1 border-t border-border pt-3">
                 @for (line of store.selectedLineItems(); track line.id) {
                   <p class="text-sm text-muted-foreground">
-                    {{ line.workDate }} · {{ line.projectCode }} · {{ line.description || '-' }} · net
-                    {{ line.lineNet }} · tax {{ line.taxCodeSnapshot }} ({{ formatTax(line.taxPercentageSnapshot) }})
+                    {{ line.workDate }} · {{ line.projectCode }} · {{ line.description || '-' }} ·
+                    net {{ line.lineNet }} · tax {{ line.taxCodeSnapshot }} ({{
+                      formatTax(line.taxPercentageSnapshot)
+                    }})
                   </p>
                 }
               </div>
@@ -249,7 +314,10 @@ export class InvoicesPage implements OnInit {
     { label: 'Combined client invoice', value: 'combined' as InvoiceGenerateMode },
   ] as const;
   protected readonly clientOptions = computed(() =>
-    activeLookup(this.clientsStore.clients()).map((client) => ({ id: client.id, label: client.name })),
+    activeLookup(this.clientsStore.clients()).map((client) => ({
+      id: client.id,
+      label: client.name,
+    })),
   );
   protected readonly taxRateOptions = computed(() =>
     this.store.taxRates().map((taxRate) => ({
@@ -264,7 +332,10 @@ export class InvoicesPage implements OnInit {
     billingModel: [BillingModel.MONTH, [Validators.required]],
     periodStart: ['', [Validators.required]],
     periodEnd: ['', [Validators.required]],
-    status: [InvoiceStatus.CONCEPT as InvoiceStatus.CONCEPT | InvoiceStatus.PROFORMA, [Validators.required]],
+    status: [
+      InvoiceStatus.CONCEPT as InvoiceStatus.CONCEPT | InvoiceStatus.PROFORMA,
+      [Validators.required],
+    ],
     mode: ['per_project' as InvoiceGenerateMode, [Validators.required]],
     taxRateId: [0, [Validators.required, Validators.min(1)]],
   });
@@ -298,7 +369,20 @@ export class InvoicesPage implements OnInit {
     }
   }
 
-  protected async setStatus(invoiceId: number, status: InvoiceStatus.OPEN | InvoiceStatus.PAID | InvoiceStatus.CREDITED): Promise<void> {
+  protected async setStatus(
+    invoiceId: number,
+    status:
+      | InvoiceStatus.CONCEPT
+      | InvoiceStatus.PROFORMA
+      | InvoiceStatus.OPEN
+      | InvoiceStatus.PAID
+      | InvoiceStatus.CREDITED,
+  ): Promise<void> {
+    const confirmationMessage = this.statusConfirmationMessage(status);
+    if (confirmationMessage && !window.confirm(confirmationMessage)) {
+      return;
+    }
+
     const payload: InvoiceStatusUpdateInput = { status };
     await this.store.updateStatus(invoiceId, payload);
     if (!this.store.error()) {
@@ -308,6 +392,21 @@ export class InvoicesPage implements OnInit {
 
   protected async selectInvoice(invoiceId: number): Promise<void> {
     await this.store.selectInvoice(invoiceId);
+  }
+
+  protected async deleteInvoice(invoiceId: number): Promise<void> {
+    if (
+      !window.confirm(
+        'Delete this invoice? Linked time entries will be unlocked and line items removed.',
+      )
+    ) {
+      return;
+    }
+
+    const deleted = await this.store.deleteInvoice(invoiceId);
+    if (deleted && !this.store.error()) {
+      this.toast.show('Invoice deleted.', 'success');
+    }
   }
 
   protected applySuggestedPeriod(): void {
@@ -322,7 +421,8 @@ export class InvoicesPage implements OnInit {
     return `${(percentage / 100).toFixed(2)}%`;
   }
 
-  protected readonly optionToLabel = (option: { label: string } | null): string => option?.label ?? '';
+  protected readonly optionToLabel = (option: { label: string } | null): string =>
+    option?.label ?? '';
 
   protected readonly isSameIdOption = (
     left: { id: number; label: string } | null,
@@ -349,9 +449,10 @@ export class InvoicesPage implements OnInit {
     return this.taxRateOptions().find((option) => option.id === value) ?? null;
   }
 
-  protected selectedInitialStatusOption():
-    | { label: string; value: InvoiceStatus.CONCEPT | InvoiceStatus.PROFORMA }
-    | null {
+  protected selectedInitialStatusOption(): {
+    label: string;
+    value: InvoiceStatus.CONCEPT | InvoiceStatus.PROFORMA;
+  } | null {
     const value = this.generationForm.controls.status.value;
     return this.initialStatusOptions.find((option) => option.value === value) ?? null;
   }
@@ -381,6 +482,30 @@ export class InvoicesPage implements OnInit {
 
   protected onModeValueChange(option: { label: string; value: InvoiceGenerateMode } | null): void {
     this.generationForm.controls.mode.setValue(option?.value ?? 'per_project');
+  }
+
+  private statusConfirmationMessage(
+    status:
+      | InvoiceStatus.CONCEPT
+      | InvoiceStatus.PROFORMA
+      | InvoiceStatus.OPEN
+      | InvoiceStatus.PAID
+      | InvoiceStatus.CREDITED,
+  ): string {
+    switch (status) {
+      case InvoiceStatus.OPEN:
+        return 'Open this invoice now? This locks linked time entries and cannot be undone.';
+      case InvoiceStatus.CONCEPT:
+        return 'Revert this invoice to concept? This will unlock linked time entries.';
+      case InvoiceStatus.PROFORMA:
+        return 'Revert this invoice to proforma? This will unlock linked time entries.';
+      case InvoiceStatus.PAID:
+        return 'Mark this invoice as paid?';
+      case InvoiceStatus.CREDITED:
+        return 'Credit this invoice? Credited invoices are terminal.';
+      default:
+        return '';
+    }
   }
 }
 

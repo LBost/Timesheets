@@ -76,4 +76,147 @@ describe('InvoicesRepository', () => {
     expect(created).toHaveLength(1);
     expect(created[0].invoiceNumber).toBe('INV-20260001');
   });
+
+  it('reverts open invoice to concept and unlocks linked entries', async () => {
+    const repository = configure({
+      time_entries: [
+        {
+          id: 100,
+          user_id: USER_ID,
+          client_id: 1,
+          project_id: 10,
+          order_id: null,
+          date: '2026-05-10',
+          hours: 2,
+          description: 'Work',
+          locked_by_invoice_id: 1,
+          locked_at: '2026-05-31T00:00:00Z',
+        },
+      ],
+      invoices: [
+        {
+          id: 1,
+          user_id: USER_ID,
+          client_id: 1,
+          invoice_number: 'INV-20260001',
+          status: InvoiceStatus.OPEN,
+          period_start: '2026-05-01',
+          period_end: '2026-06-01',
+          issue_date: '2026-05-31',
+          subtotal_net: 200,
+          total_tax: 38,
+          total_gross: 238,
+          opened_at: '2026-05-31T00:00:00Z',
+        },
+      ],
+      invoice_line_items: [
+        {
+          id: 500,
+          user_id: USER_ID,
+          invoice_id: 1,
+          time_entry_id: 100,
+          project_id: 10,
+          order_id: null,
+          description: 'Work',
+          work_date: '2026-05-10',
+          hours: 2,
+          unit_rate: 100,
+          line_net: 200,
+          tax_rate_id: 1,
+          tax_code_snapshot: 'VAT19',
+          tax_label_snapshot: 'VAT 19%',
+          tax_percentage_snapshot: 1900,
+          tax_amount: 38,
+          line_gross: 238,
+        },
+      ],
+    });
+
+    const reverted = await repository.updateStatus(1, { status: InvoiceStatus.CONCEPT });
+    expect(reverted?.status).toBe(InvoiceStatus.CONCEPT);
+
+    const created = await repository.generateInvoices({
+      clientId: 1,
+      billingModel: BillingModel.MONTH,
+      periodStart: '2026-05-01',
+      periodEnd: '2026-06-01',
+      status: InvoiceStatus.CONCEPT,
+      mode: 'combined',
+      taxRateId: 1,
+    });
+    expect(created.length).toBeGreaterThan(0);
+  });
+
+  it('deletes open invoice and unlocks linked entries', async () => {
+    const repository = configure({
+      time_entries: [
+        {
+          id: 100,
+          user_id: USER_ID,
+          client_id: 1,
+          project_id: 10,
+          order_id: null,
+          date: '2026-05-10',
+          hours: 2,
+          description: 'Work',
+          locked_by_invoice_id: 1,
+          locked_at: '2026-05-31T00:00:00Z',
+        },
+      ],
+      invoices: [
+        {
+          id: 1,
+          user_id: USER_ID,
+          client_id: 1,
+          invoice_number: 'INV-20260001',
+          status: InvoiceStatus.OPEN,
+          period_start: '2026-05-01',
+          period_end: '2026-06-01',
+          issue_date: '2026-05-31',
+          subtotal_net: 200,
+          total_tax: 38,
+          total_gross: 238,
+          opened_at: '2026-05-31T00:00:00Z',
+        },
+      ],
+      invoice_line_items: [
+        {
+          id: 500,
+          user_id: USER_ID,
+          invoice_id: 1,
+          time_entry_id: 100,
+          project_id: 10,
+          order_id: null,
+          description: 'Work',
+          work_date: '2026-05-10',
+          hours: 2,
+          unit_rate: 100,
+          line_net: 200,
+          tax_rate_id: 1,
+          tax_code_snapshot: 'VAT19',
+          tax_label_snapshot: 'VAT 19%',
+          tax_percentage_snapshot: 1900,
+          tax_amount: 38,
+          line_gross: 238,
+        },
+      ],
+    });
+
+    const deleted = await repository.deleteInvoice(1);
+    expect(deleted).toBe(true);
+
+    const invoices = await repository.listInvoices();
+    expect(invoices).toHaveLength(0);
+
+    const created = await repository.generateInvoices({
+      clientId: 1,
+      billingModel: BillingModel.MONTH,
+      periodStart: '2026-05-01',
+      periodEnd: '2026-06-01',
+      status: InvoiceStatus.CONCEPT,
+      mode: 'combined',
+      taxRateId: 1,
+    });
+    expect(created.length).toBeGreaterThan(0);
+  });
 });

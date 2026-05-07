@@ -30,7 +30,7 @@ const INVOICE_SELECT =
   'id, clientId:client_id, invoiceNumber:invoice_number, status, periodStart:period_start, periodEnd:period_end, issueDate:issue_date, subtotalNet:subtotal_net, totalTax:total_tax, totalGross:total_gross, createdAt:created_at, openedAt:opened_at, paidAt:paid_at, creditedAt:credited_at';
 
 const LINE_ITEM_SELECT =
-  'id, invoiceId:invoice_id, timeEntryId:time_entry_id, projectId:project_id, orderId:order_id, description, workDate:work_date, hours, unitRate:unit_rate, lineNet:line_net, taxRateId:tax_rate_id, taxCodeSnapshot:tax_code_snapshot, taxLabelSnapshot:tax_label_snapshot, taxPercentageSnapshot:tax_percentage_snapshot, taxAmount, lineGross:line_gross, createdAt:created_at';
+  'id, invoiceId:invoice_id, timeEntryId:time_entry_id, projectId:project_id, orderId:order_id, description, workDate:work_date, hours, unitRate:unit_rate, lineNet:line_net, taxRateId:tax_rate_id, taxCodeSnapshot:tax_code_snapshot, taxLabelSnapshot:tax_label_snapshot, taxPercentageSnapshot:tax_percentage_snapshot, taxAmount:tax_amount, lineGross:line_gross, createdAt:created_at';
 
 const TAX_RATE_SELECT =
   'id, code, label, percentage, isActive:is_active, createdAt:created_at';
@@ -205,12 +205,23 @@ export class InvoicesRepository {
     if (currentStatus !== InvoiceStatus.OPEN && input.status === InvoiceStatus.PAID) {
       throw new Error('Only open invoices can be marked as paid.');
     }
+    if (
+      (input.status === InvoiceStatus.CONCEPT || input.status === InvoiceStatus.PROFORMA) &&
+      currentStatus !== InvoiceStatus.OPEN
+    ) {
+      throw new Error('Only open invoices can be reverted to concept or proforma.');
+    }
 
     const nowIso = new Date().toISOString();
     const patch: Record<string, unknown> = { status: input.status };
     if (input.status === InvoiceStatus.OPEN) patch['opened_at'] = nowIso;
     if (input.status === InvoiceStatus.PAID) patch['paid_at'] = nowIso;
     if (input.status === InvoiceStatus.CREDITED) patch['credited_at'] = nowIso;
+    if (input.status === InvoiceStatus.CONCEPT || input.status === InvoiceStatus.PROFORMA) {
+      patch['opened_at'] = null;
+      patch['paid_at'] = null;
+      patch['credited_at'] = null;
+    }
 
     const { data: updated, error } = await this.supabase
       .from('invoices')
@@ -248,6 +259,20 @@ export class InvoicesRepository {
       }
     }
 
+    if (input.status === InvoiceStatus.CONCEPT || input.status === InvoiceStatus.PROFORMA) {
+      const timeEntryIds = await this.getTimeEntryIdsForInvoice(id);
+      for (const timeEntryId of timeEntryIds) {
+        const { error: unlockError } = await this.supabase
+          .from('time_entries')
+          .update({
+            locked_by_invoice_id: null,
+            locked_at: null,
+          })
+          .eq('id', timeEntryId);
+        throwIfError(unlockError, 'Failed to unlock time entries.');
+      }
+    }
+
     const [clientsById, countsByInvoiceId] = await Promise.all([
       this.getClientNamesById(updated.clientId),
       this.getLineItemCountsByInvoiceId(id),
@@ -257,6 +282,39 @@ export class InvoicesRepository {
       clientsById.get(updated.clientId) ?? 'Unknown client',
       countsByInvoiceId.get(id) ?? 0,
     );
+  }
+
+  async deleteInvoice(id: number): Promise<boolean> {
+    const { data: existing, error: existingError } = await this.supabase
+      .from('invoices')
+      .select('id, status')
+      .eq('id', id)
+      .maybeSingle<{ id: number; status: string }>();
+    throwIfError(existingError, 'Failed to load invoice.');
+    if (!existing) {
+      return false;
+    }
+
+    if (existing.status === InvoiceStatus.CREDITED) {
+      throw new Error('Credited invoices cannot be deleted.');
+    }
+
+    if (existing.status === InvoiceStatus.PAID) {
+      throw new Error('Paid invoices cannot be deleted.');
+    }
+
+    const { error: unlockError } = await this.supabase
+      .from('time_entries')
+      .update({
+        locked_by_invoice_id: null,
+        locked_at: null,
+      })
+      .eq('locked_by_invoice_id', id);
+    throwIfError(unlockError, 'Failed to unlock time entries.');
+
+    const { error: deleteError } = await this.supabase.from('invoices').delete().eq('id', id);
+    throwIfError(deleteError, 'Failed to delete invoice.');
+    return true;
   }
 
   private async seedDefaultTaxRates(): Promise<TaxRateModel[]> {

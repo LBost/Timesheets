@@ -86,6 +86,29 @@ export const InvoicesStore = signalStore(
         });
       }
     },
+    async deleteInvoice(invoiceId: number): Promise<boolean> {
+      patchState(store, { isLoading: true, error: null });
+      try {
+        const deleted = await repository.deleteInvoice(invoiceId);
+        if (!deleted) {
+          patchState(store, { isLoading: false, error: 'Invoice not found.' });
+          return false;
+        }
+        patchState(store, (state) => ({
+          invoices: state.invoices.filter((invoice) => invoice.id !== invoiceId),
+          selectedInvoiceId: state.selectedInvoiceId === invoiceId ? null : state.selectedInvoiceId,
+          selectedLineItems: state.selectedInvoiceId === invoiceId ? [] : state.selectedLineItems,
+          isLoading: false,
+        }));
+        return true;
+      } catch (error) {
+        patchState(store, {
+          isLoading: false,
+          error: error instanceof Error ? error.message : 'Failed to delete invoice.',
+        });
+        return false;
+      }
+    },
     async selectInvoice(invoiceId: number | null): Promise<void> {
       patchState(store, { selectedInvoiceId: invoiceId, selectedLineItems: [] });
       if (invoiceId === null) {

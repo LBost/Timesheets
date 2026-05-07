@@ -38,6 +38,7 @@ describe('InvoicesStore', () => {
       ]),
       generateInvoices: vi.fn(),
       updateStatus: vi.fn(),
+      deleteInvoice: vi.fn(),
       listLineItems: vi.fn(),
     };
 

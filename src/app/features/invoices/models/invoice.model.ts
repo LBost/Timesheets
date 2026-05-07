@@ -58,5 +58,10 @@ export interface InvoiceGenerateInput {
 }
 
 export interface InvoiceStatusUpdateInput {
-  status: InvoiceStatus.OPEN | InvoiceStatus.PAID | InvoiceStatus.CREDITED;
+  status:
+    | InvoiceStatus.CONCEPT
+    | InvoiceStatus.PROFORMA
+    | InvoiceStatus.OPEN
+    | InvoiceStatus.PAID
+    | InvoiceStatus.CREDITED;
 }
