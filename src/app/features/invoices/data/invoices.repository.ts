@@ -93,11 +93,14 @@ export class InvoicesRepository {
       return [];
     }
 
-    const [projectsById, ordersById] = await Promise.all([this.getProjectCodesById(), this.getOrderCodesById()]);
+    const [projectsById, ordersById] = await Promise.all([
+      this.getProjectSummariesById(),
+      this.getOrderSummariesById(),
+    ]);
     return rows.map((row) =>
       toInvoiceLineItemVM(
         toInvoiceLineItemModel(row),
-        projectsById.get(row.projectId) ?? 'UNKNOWN',
+        projectsById.get(row.projectId) ?? { code: 'UNKNOWN', name: 'Unknown project' },
         row.orderId === null ? null : (ordersById.get(row.orderId) ?? null),
       ),
     );
@@ -562,24 +565,6 @@ export class InvoicesRepository {
     const { data: rows, error } = await query.returns<Array<{ id: number; name: string }>>();
     throwIfError(error, 'Failed to load clients.');
     return new Map((rows ?? []).map((row) => [row.id, row.name]));
-  }
-
-  private async getProjectCodesById(): Promise<Map<number, string>> {
-    const { data: rows, error } = await this.supabase
-      .from('projects')
-      .select('id, code')
-      .returns<Array<{ id: number; code: string }>>();
-    throwIfError(error, 'Failed to load projects.');
-    return new Map((rows ?? []).map((row) => [row.id, row.code]));
-  }
-
-  private async getOrderCodesById(): Promise<Map<number, string>> {
-    const { data: rows, error } = await this.supabase
-      .from('orders')
-      .select('id, code')
-      .returns<Array<{ id: number; code: string }>>();
-    throwIfError(error, 'Failed to load orders.');
-    return new Map((rows ?? []).map((row) => [row.id, row.code]));
   }
 
   private async getProjectSummariesById(): Promise<Map<number, { code: string; name: string }>> {

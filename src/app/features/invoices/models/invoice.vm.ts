@@ -7,5 +7,7 @@ export interface InvoiceVM extends InvoiceModel {
 
 export interface InvoiceLineItemVM extends InvoiceLineItemModel {
   projectCode: string;
+  projectName: string;
   orderCode: string | null;
+  orderTitle: string | null;
 }

@@ -163,12 +163,7 @@ import { InvoicesTableComponent } from './components/invoices-table.component';
                         @for (line of store.selectedLineItems(); track line.id) {
                           <tr class="border-t border-border/60">
                             <td class="px-3 py-2 align-top whitespace-nowrap">{{ line.workDate }}</td>
-                            <td class="px-3 py-2 align-top">
-                              <div>{{ invoiceLineProjectLabel(line) }}</div>
-                              @if (line.description) {
-                                <div class="text-xs text-muted-foreground">{{ line.description }}</div>
-                              }
-                            </td>
+                            <td class="px-3 py-2 align-top">{{ invoiceLineProjectLabel(line) }}</td>
                             <td class="px-3 py-2 text-right align-top tabular-nums whitespace-nowrap">
                               {{ formatHours(line.hours) }}
                             </td>
@@ -192,8 +187,11 @@ import { InvoicesTableComponent } from './components/invoices-table.component';
                       </tbody>
                       <tfoot class="border-t border-border bg-muted/20">
                         <tr>
-                          <td class="px-3 py-2 text-xs font-semibold uppercase text-muted-foreground" colspan="3">
+                          <td class="px-3 py-2 text-xs font-semibold uppercase text-muted-foreground" colspan="2">
                             Totals
+                          </td>
+                          <td class="px-3 py-2 text-right font-semibold tabular-nums whitespace-nowrap">
+                            {{ formatHours(selectedLineTotals().hours) }}
                           </td>
                           <td class="px-3 py-2 text-right font-semibold tabular-nums whitespace-nowrap">
                             {{ formatMoney(selectedLineTotals().net) }}
@@ -455,11 +453,12 @@ export class InvoicesPage implements OnInit {
   protected readonly selectedLineTotals = computed(() =>
     this.store.selectedLineItems().reduce(
       (totals, line) => ({
+        hours: totals.hours + line.hours,
         net: totals.net + line.lineNet,
         tax: totals.tax + line.taxAmount,
         gross: totals.gross + line.lineGross,
       }),
-      { net: 0, tax: 0, gross: 0 },
+      { hours: 0, net: 0, tax: 0, gross: 0 },
     ),
   );
   protected readonly previewDialogState = signal<'open' | 'closed'>('closed');
@@ -819,8 +818,16 @@ export class InvoicesPage implements OnInit {
     return this.selectedPeriodOption()?.label ?? '-';
   }
 
-  protected invoiceLineProjectLabel(line: { projectCode: string; orderCode: string | null }): string {
-    return line.orderCode ?? line.projectCode;
+  protected invoiceLineProjectLabel(line: {
+    projectCode: string;
+    projectName: string;
+    orderCode: string | null;
+    orderTitle: string | null;
+  }): string {
+    if (line.orderCode && line.orderTitle) {
+      return `${line.orderCode} - ${line.orderTitle}`;
+    }
+    return `${line.projectCode} - ${line.projectName}`;
   }
 
   protected formatInvoicePeriod(periodStart: string, periodEnd: string): string {

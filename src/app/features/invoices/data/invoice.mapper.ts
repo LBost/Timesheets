@@ -73,10 +73,16 @@ export function toInvoiceLineItemModel(row: InvoiceLineItemRow): InvoiceLineItem
 
 export function toInvoiceLineItemVM(
   model: InvoiceLineItemModel,
-  projectCode: string,
-  orderCode: string | null,
+  project: { code: string; name: string },
+  order: { code: string; title: string } | null,
 ): InvoiceLineItemVM {
-  return { ...model, projectCode, orderCode };
+  return {
+    ...model,
+    projectCode: project.code,
+    projectName: project.name,
+    orderCode: order?.code ?? null,
+    orderTitle: order?.title ?? null,
+  };
 }
 
 export function toTaxRateModel(row: TaxRateRow): TaxRateModel {
