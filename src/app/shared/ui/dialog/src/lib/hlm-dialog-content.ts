@@ -26,7 +26,7 @@ import { HlmDialogClose } from './hlm-dialog-close';
 		}
 
 		@if (showCloseButton()) {
-			<button hlmBtn variant="ghost" size="icon-sm" class="absolute end-4 top-4" hlmDialogClose>
+			<button hlmBtn variant="ghost" size="icon-sm" class="absolute inset-e-4 top-4" hlmDialogClose>
 				<span class="sr-only">close</span>
 				<ng-icon hlm size="sm" name="lucideX" />
 			</button>
@@ -38,6 +38,7 @@ export class HlmDialogContent {
 	private readonly _dialogContext = injectBrnDialogContext({ optional: true });
 
 	public readonly showCloseButton = input<boolean, BooleanInput>(true, { transform: booleanAttribute });
+	public readonly userClass = input<string>('', { alias: 'class' });
 
 	public readonly state = computed(() => this._dialogRef?.state() ?? 'closed');
 
@@ -48,6 +49,7 @@ export class HlmDialogContent {
 		classes(() => [
 			'bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 relative z-50 mx-auto grid w-[calc(100vw-2rem)] gap-4 rounded-lg border p-6 shadow-lg data-[state=closed]:duration-200 data-[state=open]:duration-200 sm:mx-0 sm:max-w-lg',
 			this._dynamicComponentClass,
+			this.userClass(),
 		]);
 	}
 }

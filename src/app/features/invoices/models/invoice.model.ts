@@ -69,7 +69,11 @@ export interface InvoicePreviewRequest {
 export interface InvoicePreviewLineItem {
   timeEntryId: number;
   projectId: number;
+  projectCode: string;
+  projectName: string;
   orderId: number | null;
+  orderCode: string | null;
+  orderTitle: string | null;
   description: string;
   workDate: string;
   hours: number;

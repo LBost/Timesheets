@@ -235,6 +235,10 @@ export class InvoicesRepository {
     if (entries.length === 0) {
       return [];
     }
+    const [projectsById, ordersById] = await Promise.all([
+      this.getProjectSummariesById(),
+      this.getOrderSummariesById(),
+    ]);
 
     const grouped =
       input.mode === 'per_project'
@@ -254,7 +258,11 @@ export class InvoicesRepository {
         return {
           timeEntryId: entry.id,
           projectId: entry.project_id,
+          projectCode: projectsById.get(entry.project_id)?.code ?? 'UNKNOWN',
+          projectName: projectsById.get(entry.project_id)?.name ?? 'Unknown project',
           orderId: entry.order_id,
+          orderCode: entry.order_id === null ? null : (ordersById.get(entry.order_id)?.code ?? null),
+          orderTitle: entry.order_id === null ? null : (ordersById.get(entry.order_id)?.title ?? null),
           description: entry.description ?? '',
           workDate: entry.date,
           hours: entry.hours,
@@ -578,6 +586,24 @@ export class InvoicesRepository {
       .returns<Array<{ id: number; code: string }>>();
     throwIfError(error, 'Failed to load orders.');
     return new Map((rows ?? []).map((row) => [row.id, row.code]));
+  }
+
+  private async getProjectSummariesById(): Promise<Map<number, { code: string; name: string }>> {
+    const { data: rows, error } = await this.supabase
+      .from('projects')
+      .select('id, code, name')
+      .returns<Array<{ id: number; code: string; name: string }>>();
+    throwIfError(error, 'Failed to load projects.');
+    return new Map((rows ?? []).map((row) => [row.id, { code: row.code, name: row.name }]));
+  }
+
+  private async getOrderSummariesById(): Promise<Map<number, { code: string; title: string }>> {
+    const { data: rows, error } = await this.supabase
+      .from('orders')
+      .select('id, code, title')
+      .returns<Array<{ id: number; code: string; title: string }>>();
+    throwIfError(error, 'Failed to load orders.');
+    return new Map((rows ?? []).map((row) => [row.id, { code: row.code, title: row.title }]));
   }
 
   private async getLineItemCountsByInvoiceId(invoiceId?: number): Promise<Map<number, number>> {
