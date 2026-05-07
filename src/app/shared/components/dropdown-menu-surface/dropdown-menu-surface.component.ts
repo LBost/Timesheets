@@ -16,7 +16,7 @@ export class DropdownMenuSurfaceComponent {
 
   protected readonly menuClasses = computed(() => {
     const extra = this.className().trim();
-    const base = 'border border-border/50 bg-card/95 shadow-lg shadow-black/20 backdrop-blur-sm';
+    const base = 'border border-border bg-card/95 shadow-lg shadow-black/20 backdrop-blur-sm';
     return extra ? `${base} ${extra}` : base;
   });
 }
