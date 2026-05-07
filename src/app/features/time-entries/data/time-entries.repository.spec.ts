@@ -148,4 +148,50 @@ describe('TimeEntriesRepository', () => {
     expect(may).toHaveLength(1);
     expect(may[0].date).toBe('2026-05-15');
   });
+
+  it('rejects updates for locked entries', async () => {
+    configure(
+      seed({
+        time_entries: [
+          {
+            id: 200,
+            user_id: USER_ID,
+            client_id: 1,
+            project_id: 10,
+            order_id: 100,
+            date: '2026-05-10',
+            hours: 2,
+            description: 'Locked',
+            locked_by_invoice_id: 99,
+            locked_at: '2026-05-11T00:00:00Z',
+          },
+        ],
+      }),
+    );
+
+    await expect(repository.updateEntry(200, { hours: 3 })).rejects.toThrow('locked by an open invoice');
+  });
+
+  it('rejects delete for locked entries', async () => {
+    configure(
+      seed({
+        time_entries: [
+          {
+            id: 201,
+            user_id: USER_ID,
+            client_id: 1,
+            project_id: 10,
+            order_id: 100,
+            date: '2026-05-10',
+            hours: 2,
+            description: 'Locked',
+            locked_by_invoice_id: 99,
+            locked_at: '2026-05-11T00:00:00Z',
+          },
+        ],
+      }),
+    );
+
+    await expect(repository.deleteEntry(201)).rejects.toThrow('locked by an open invoice');
+  });
 });

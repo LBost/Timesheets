@@ -32,6 +32,26 @@ alter table public.settings
   add constraint settings_user_id_fkey
     foreign key (user_id) references auth.users(id) on delete cascade;
 
+alter table public.tax_rates
+  drop constraint if exists tax_rates_user_id_fkey,
+  add constraint tax_rates_user_id_fkey
+    foreign key (user_id) references auth.users(id) on delete cascade;
+
+alter table public.invoices
+  drop constraint if exists invoices_user_id_fkey,
+  add constraint invoices_user_id_fkey
+    foreign key (user_id) references auth.users(id) on delete cascade;
+
+alter table public.invoice_line_items
+  drop constraint if exists invoice_line_items_user_id_fkey,
+  add constraint invoice_line_items_user_id_fkey
+    foreign key (user_id) references auth.users(id) on delete cascade;
+
+alter table public.time_entries
+  drop constraint if exists time_entries_locked_by_invoice_id_fkey,
+  add constraint time_entries_locked_by_invoice_id_fkey
+    foreign key (locked_by_invoice_id) references public.invoices(id) on delete set null;
+
 -- ---------------------------------------------------------------------------
 -- Enable RLS and owner-only policies (user_id = auth.uid()) for every table.
 -- ---------------------------------------------------------------------------
@@ -85,3 +105,33 @@ create policy "settings owner read"   on public.settings for select using (user_
 create policy "settings owner insert" on public.settings for insert with check (user_id = auth.uid());
 create policy "settings owner update" on public.settings for update using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "settings owner delete" on public.settings for delete using (user_id = auth.uid());
+
+alter table public.tax_rates enable row level security;
+drop policy if exists "tax_rates owner read"   on public.tax_rates;
+drop policy if exists "tax_rates owner insert" on public.tax_rates;
+drop policy if exists "tax_rates owner update" on public.tax_rates;
+drop policy if exists "tax_rates owner delete" on public.tax_rates;
+create policy "tax_rates owner read"   on public.tax_rates for select using (user_id = auth.uid());
+create policy "tax_rates owner insert" on public.tax_rates for insert with check (user_id = auth.uid());
+create policy "tax_rates owner update" on public.tax_rates for update using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "tax_rates owner delete" on public.tax_rates for delete using (user_id = auth.uid());
+
+alter table public.invoices enable row level security;
+drop policy if exists "invoices owner read"   on public.invoices;
+drop policy if exists "invoices owner insert" on public.invoices;
+drop policy if exists "invoices owner update" on public.invoices;
+drop policy if exists "invoices owner delete" on public.invoices;
+create policy "invoices owner read"   on public.invoices for select using (user_id = auth.uid());
+create policy "invoices owner insert" on public.invoices for insert with check (user_id = auth.uid());
+create policy "invoices owner update" on public.invoices for update using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "invoices owner delete" on public.invoices for delete using (user_id = auth.uid());
+
+alter table public.invoice_line_items enable row level security;
+drop policy if exists "invoice_line_items owner read"   on public.invoice_line_items;
+drop policy if exists "invoice_line_items owner insert" on public.invoice_line_items;
+drop policy if exists "invoice_line_items owner update" on public.invoice_line_items;
+drop policy if exists "invoice_line_items owner delete" on public.invoice_line_items;
+create policy "invoice_line_items owner read"   on public.invoice_line_items for select using (user_id = auth.uid());
+create policy "invoice_line_items owner insert" on public.invoice_line_items for insert with check (user_id = auth.uid());
+create policy "invoice_line_items owner update" on public.invoice_line_items for update using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "invoice_line_items owner delete" on public.invoice_line_items for delete using (user_id = auth.uid());

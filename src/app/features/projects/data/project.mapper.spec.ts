@@ -24,9 +24,9 @@ describe('project.mapper', () => {
   });
 
   it('builds partial update payload', () => {
-    expect(toProjectUpdateValues({ code: ' abc ', billingModel: BillingModel.MONTHLY })).toEqual({
+    expect(toProjectUpdateValues({ code: ' abc ', billingModel: BillingModel.MONTH })).toEqual({
       code: 'ABC',
-      billingModel: BillingModel.MONTHLY,
+      billingModel: BillingModel.MONTH,
     });
     expect(toProjectUpdateValues({})).toEqual({});
   });

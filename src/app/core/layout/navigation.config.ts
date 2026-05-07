@@ -64,8 +64,7 @@ export const APP_NAVIGATION: NavigationSection[] = [
         label: 'Invoices',
         route: '/invoices',
         icon: 'lucideReceipt',
-        enabled: false,
-        comingSoon: true
+        enabled: true
       }
     ]
   }

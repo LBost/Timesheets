@@ -9,6 +9,8 @@ export interface TimeEntryRecord {
   date: string;
   hours: number;
   description: string;
+  lockedByInvoiceId: number | null;
+  lockedAt: Date | null;
   createdAt: Date;
 }
 
@@ -26,6 +28,8 @@ export interface TimeEntryRow {
   date: string;
   hours: number;
   description: string | null;
+  lockedByInvoiceId: number | null;
+  lockedAt: string | null;
   createdAt: string;
 }
 
@@ -38,6 +42,8 @@ export function fromTimeEntryRow(row: TimeEntryRow): TimeEntryRecord {
     date: row.date,
     hours: Number(row.hours),
     description: row.description ?? '',
+    lockedByInvoiceId: row.lockedByInvoiceId ?? null,
+    lockedAt: row.lockedAt ? new Date(row.lockedAt) : null,
     createdAt: new Date(row.createdAt),
   };
 }
@@ -51,6 +57,8 @@ export function toTimeEntryModel(record: TimeEntryRecord): TimeEntryModel {
     date: record.date,
     hours: record.hours,
     description: record.description,
+    lockedByInvoiceId: record.lockedByInvoiceId,
+    lockedAt: record.lockedAt,
     createdAt: record.createdAt,
   };
 }

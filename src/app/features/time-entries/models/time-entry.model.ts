@@ -6,6 +6,8 @@ export interface TimeEntryModel {
   date: string;
   hours: number;
   description: string;
+  lockedByInvoiceId: number | null;
+  lockedAt: Date | null;
   createdAt: Date;
 }
 

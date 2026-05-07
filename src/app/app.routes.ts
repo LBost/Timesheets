@@ -40,6 +40,11 @@ export const routes: Routes = [
           import('./features/orders/ui/orders.page').then((module) => module.OrdersPage),
       },
       {
+        path: 'invoices',
+        loadComponent: () =>
+          import('./features/invoices/ui/invoices.page').then((module) => module.InvoicesPage),
+      },
+      {
         path: 'settings',
         loadComponent: () =>
           import('./features/settings/ui/settings.page').then((module) => module.SettingsPage),

@@ -40,6 +40,8 @@ describe('time-entry.mapper', () => {
       date: '2026-05-01',
       hours: 4,
       description: 'Work',
+      lockedByInvoiceId: null,
+      lockedAt: null,
       createdAt: new Date('2026-05-01T00:00:00Z'),
     });
 

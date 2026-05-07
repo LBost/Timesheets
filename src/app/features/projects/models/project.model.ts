@@ -1,8 +1,7 @@
 export enum BillingModel {
-  FIXED = 'fixed',
-  DAILY = 'daily',
-  MONTHLY = 'monthly',
-  YEARLY = 'yearly',
+  WEEK = 'week',
+  MONTH = 'month',
+  YEAR = 'year',
 }
 
 export interface ProjectModel {

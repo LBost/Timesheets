@@ -19,7 +19,7 @@ import {
 } from './time-entry.mapper';
 
 const TIME_ENTRY_SELECT =
-  'id, clientId:client_id, projectId:project_id, orderId:order_id, date, hours, description, createdAt:created_at';
+  'id, clientId:client_id, projectId:project_id, orderId:order_id, date, hours, description, lockedByInvoiceId:locked_by_invoice_id, lockedAt:locked_at, createdAt:created_at';
 
 type ClientLookupRow = {
   id: number;
@@ -116,6 +116,8 @@ export class TimeEntriesRepository {
         date: payload.date,
         hours: payload.hours,
         description: payload.description || null,
+        locked_by_invoice_id: null,
+        locked_at: null,
       })
       .select(TIME_ENTRY_SELECT)
       .single<TimeEntryRow>();
@@ -132,12 +134,21 @@ export class TimeEntriesRepository {
 
     const { data: current, error: currentError } = await this.supabase
       .from('time_entries')
-      .select('id, client_id, project_id, order_id')
+      .select('id, client_id, project_id, order_id, locked_by_invoice_id')
       .eq('id', id)
-      .maybeSingle<{ id: number; client_id: number; project_id: number; order_id: number | null }>();
+      .maybeSingle<{
+        id: number;
+        client_id: number;
+        project_id: number;
+        order_id: number | null;
+        locked_by_invoice_id: number | null;
+      }>();
     throwIfError(currentError, 'Failed to load time entry.');
     if (!current) {
       return null;
+    }
+    if (current.locked_by_invoice_id !== null) {
+      throw new Error('This time entry is locked by an open invoice and cannot be edited.');
     }
 
     const nextClientId = values.clientId ?? current.client_id;
@@ -170,12 +181,15 @@ export class TimeEntriesRepository {
   async deleteEntry(id: number): Promise<boolean> {
     const { data: existingRow, error: existenceError } = await this.supabase
       .from('time_entries')
-      .select('id')
+      .select('id, locked_by_invoice_id')
       .eq('id', id)
-      .maybeSingle<{ id: number }>();
+      .maybeSingle<{ id: number; locked_by_invoice_id: number | null }>();
     throwIfError(existenceError, 'Failed to verify time entry.');
     if (!existingRow) {
       return false;
+    }
+    if (existingRow.locked_by_invoice_id !== null) {
+      throw new Error('This time entry is locked by an open invoice and cannot be deleted.');
     }
 
     const { error } = await this.supabase.from('time_entries').delete().eq('id', id);
