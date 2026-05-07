@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucidePlus } from '@ng-icons/lucide';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
-import { NgIcon } from '@ng-icons/core';
 import { HlmIcon } from '@spartan-ng/helm/icon';
 
 type WeekDay = {
@@ -11,6 +12,7 @@ type WeekDay = {
 @Component({
   selector: 'app-time-entries-week-grid',
   imports: [HlmButtonImports, NgIcon, HlmIcon],
+  providers: [provideIcons({ lucidePlus })],
   template: `
     <div class="overflow-hidden rounded-lg border border-border">
       <div class="grid grid-cols-7 border-b border-border bg-muted/40 text-xs font-medium uppercase tracking-wide">
@@ -35,12 +37,18 @@ type WeekDay = {
               @for (entry of entriesForDate()(day.date); track entry.id) {
                 <button
                   type="button"
-                  class="w-full rounded border border-border/50 border-l-[3px] bg-card px-2 py-1 text-left text-[11px] leading-tight hover:bg-accent cursor-pointer"
+                  class="relative w-full rounded border border-border/50 border-l-[3px] bg-card px-2 py-1 text-left text-[11px] leading-tight hover:bg-accent cursor-pointer"
                   [style.border-left-color]="entryClientAccent()(entry)"
                   (click)="editEntry.emit(entry.id)"
                 >
                   <div class="font-medium">{{ entry.projectCode }}{{ entry.orderCode ? ' / ' + entry.orderCode : '' }}</div>
                   <div class="text-muted-foreground">{{ entry.hours.toFixed(2) }}h · {{ entry.clientName }}</div>
+                  @if (entry.lockedByInvoiceId !== null) {
+                    <span
+                      class="pointer-events-none absolute right-1 top-1 inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500/70"
+                      aria-hidden="true"
+                    ></span>
+                  }
                 </button>
               } @empty {
                 <div class="text-[11px] text-muted-foreground">No entries</div>

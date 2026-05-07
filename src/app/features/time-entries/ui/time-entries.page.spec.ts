@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { vi } from 'vitest';
+import { ToastService } from '../../../core/feedback/toast.service';
 import { ClientsStore } from '../../clients/state/clients.store';
 import { OrdersStore } from '../../orders/state/orders.store';
 import { ProjectsStore } from '../../projects/state/projects.store';
@@ -11,6 +12,7 @@ describe('TimeEntriesPage', () => {
   const storeMock = {
     entries: vi.fn(),
     entriesByDate: vi.fn(),
+    selectedEntry: vi.fn(),
     dayTotals: vi.fn(),
     monthTotalHours: vi.fn(),
     selectedMonth: vi.fn(),
@@ -54,9 +56,14 @@ describe('TimeEntriesPage', () => {
     savePreferredTimeEntriesView: vi.fn(),
   };
 
+  const toastMock = {
+    show: vi.fn(),
+  };
+
   beforeEach(async () => {
     storeMock.entries.mockReturnValue([]);
     storeMock.entriesByDate.mockReturnValue({});
+    storeMock.selectedEntry.mockReturnValue(null);
     storeMock.dayTotals.mockReturnValue({});
     storeMock.monthTotalHours.mockReturnValue(0);
     storeMock.selectedMonth.mockReturnValue(new Date(2026, 4, 1));
@@ -96,6 +103,7 @@ describe('TimeEntriesPage', () => {
         { provide: ProjectsStore, useValue: projectsStoreMock },
         { provide: OrdersStore, useValue: ordersStoreMock },
         { provide: SettingsStore, useValue: settingsStoreMock },
+        { provide: ToastService, useValue: toastMock },
       ],
     }).compileComponents();
   });
@@ -114,5 +122,72 @@ describe('TimeEntriesPage', () => {
     expect(projectsStoreMock.loadProjectsIfNeeded).toHaveBeenCalled();
     expect(ordersStoreMock.loadOrdersIfNeeded).toHaveBeenCalled();
     expect(settingsStoreMock.loadSettingsIfNeeded).toHaveBeenCalled();
+  });
+
+  it('entryInvoicedSummary reports none, partial, and all states', () => {
+    const fixture = TestBed.createComponent(TimeEntriesPage);
+    const page = fixture.componentInstance as TimeEntriesPage & {
+      entryInvoicedSummary: (d: string) => { state: string };
+    };
+
+    storeMock.entriesByDate.mockReturnValue({
+      '2026-05-01': [
+        {
+          id: 1,
+          lockedByInvoiceId: null,
+        },
+      ],
+    } as any);
+    expect(page.entryInvoicedSummary('2026-05-01').state).toBe('none');
+
+    storeMock.entriesByDate.mockReturnValue({
+      '2026-05-02': [
+        { id: 1, lockedByInvoiceId: 9 },
+        { id: 2, lockedByInvoiceId: null },
+      ],
+    } as any);
+    expect(page.entryInvoicedSummary('2026-05-02').state).toBe('partial');
+
+    storeMock.entriesByDate.mockReturnValue({
+      '2026-05-03': [
+        { id: 1, lockedByInvoiceId: 9 },
+        { id: 2, lockedByInvoiceId: 8 },
+      ],
+    } as any);
+    expect(page.entryInvoicedSummary('2026-05-03').state).toBe('all');
+  });
+
+  it('does not call update or delete store methods when entry is invoice-locked', async () => {
+    storeMock.editingEntryId.mockReturnValue(1);
+    storeMock.selectedEntry.mockReturnValue({
+      id: 1,
+      lockedByInvoiceId: 42,
+      clientId: 1,
+      projectId: 1,
+      orderId: null,
+      date: '2026-05-04',
+      hours: 4,
+      description: '',
+      lockedAt: new Date(),
+      createdAt: new Date(),
+      clientName: 'C',
+      clientAccentColor: null,
+      projectCode: 'P',
+      projectName: 'N',
+      orderCode: null,
+    } as any);
+
+    const fixture = TestBed.createComponent(TimeEntriesPage);
+    const page = fixture.componentInstance as TimeEntriesPage & {
+      submitEntry: () => Promise<void>;
+      deleteEditingEntry: () => Promise<void>;
+    };
+
+    fixture.detectChanges();
+    await page.submitEntry();
+    await page.deleteEditingEntry();
+
+    expect(storeMock.updateEntry).not.toHaveBeenCalled();
+    expect(storeMock.deleteEntry).not.toHaveBeenCalled();
   });
 });

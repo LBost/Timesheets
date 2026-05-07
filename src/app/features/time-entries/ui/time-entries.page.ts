@@ -45,6 +45,12 @@ type WeekDay = {
   dayNumber: number;
 };
 
+export type EntryInvoicedSummary = {
+  state: 'none' | 'partial' | 'all';
+  invoiced: number;
+  total: number;
+};
+
 @Component({
   selector: 'app-time-entries-page',
   imports: [
@@ -103,6 +109,7 @@ type WeekDay = {
             [dayTotal]="dayTotalFn"
             [entryClientAccent]="entryClientAccentFn"
             [entryAccentsForDate]="entryAccentsForDateFn"
+            [entryInvoicedSummary]="entryInvoicedSummaryFn"
             [formatDayHeading]="formatDayHeadingFn"
             (addForDate)="openAddForDate($event)"
             (editEntry)="editEntry($event)"
@@ -124,11 +131,13 @@ type WeekDay = {
         <ng-template hlmSheetPortal>
           <hlm-sheet-content class="w-full border-border/40 sm:max-w-xl">
             <div hlmSheetHeader>
-              <h2 hlmSheetTitle>{{ isEditing() ? 'Edit time entry' : 'Add time entry' }}</h2>
+              <h2 hlmSheetTitle>{{ sheetTitle() }}</h2>
             </div>
             <app-time-entry-sheet-form
               [form]="entryForm"
               [isEditing]="isEditing()"
+              [isReadOnly]="isEditingLocked()"
+              [lockedByInvoiceId]="store.selectedEntry()?.lockedByInvoiceId ?? null"
               [isLoading]="store.isLoading()"
               [isValid]="entryForm.valid && cascadeIsValid()"
               [clientOptions]="clientOptions()"
@@ -220,7 +229,23 @@ export class TimeEntriesPage implements OnInit {
   protected readonly entryClientAccentFn = (entry: { clientId: number; clientAccentColor: string | null }) =>
     this.entryClientAccent(entry);
   protected readonly entryAccentsForDateFn = (date: string) => this.entryAccentsForDate(date);
+  protected readonly entryInvoicedSummaryFn = (date: string) => this.entryInvoicedSummary(date);
   protected readonly formatDayHeadingFn = (isoDate: string) => this.formatDayHeading(isoDate);
+
+  protected readonly isEditingLocked = computed(() => {
+    const editing = this.store.selectedEntry();
+    return editing?.lockedByInvoiceId != null;
+  });
+
+  protected readonly sheetTitle = computed(() => {
+    if (!this.isEditing()) {
+      return 'Add time entry';
+    }
+    if (this.isEditingLocked()) {
+      return 'View time entry';
+    }
+    return 'Edit time entry';
+  });
 
   protected readonly entryForm = this.formBuilder.group({
     clientId: [null as number | null, [Validators.required]],
@@ -330,6 +355,19 @@ export class TimeEntriesPage implements OnInit {
 
   protected entriesForDate(date: string): Array<ReturnType<typeof this.store.entries>[number]> {
     return this.store.entriesByDate()[date] ?? [];
+  }
+
+  protected entryInvoicedSummary(date: string): EntryInvoicedSummary {
+    const entries = this.entriesForDate(date);
+    const invoiced = entries.filter((e) => e.lockedByInvoiceId !== null).length;
+    const total = entries.length;
+    if (invoiced === 0) {
+      return { state: 'none', invoiced, total };
+    }
+    if (invoiced === total) {
+      return { state: 'all', invoiced, total };
+    }
+    return { state: 'partial', invoiced, total };
   }
 
   protected entryClientAccent(entry: {
@@ -469,6 +507,9 @@ export class TimeEntriesPage implements OnInit {
   }
 
   protected async submitEntry(): Promise<void> {
+    if (this.isEditingLocked()) {
+      return;
+    }
     if (this.entryForm.invalid || !this.cascadeIsValid()) {
       this.entryForm.markAllAsTouched();
       return;
@@ -495,6 +536,9 @@ export class TimeEntriesPage implements OnInit {
   }
 
   protected async deleteEditingEntry(): Promise<void> {
+    if (this.isEditingLocked()) {
+      return;
+    }
     const editingId = this.store.editingEntryId();
     if (editingId === null) {
       return;

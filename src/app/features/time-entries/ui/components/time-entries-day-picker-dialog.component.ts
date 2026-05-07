@@ -27,12 +27,18 @@ import { HlmDialogImports } from '@spartan-ng/helm/dialog';
               @for (entry of entries(); track entry.id) {
                 <button
                   type="button"
-                  class="mb-2 w-full rounded-md border border-border border-l-[3px] bg-card px-3 py-2 text-left text-sm last:mb-0 hover:bg-accent/70"
+                  class="relative mb-2 w-full rounded-md border border-border border-l-[3px] bg-card px-3 py-2 text-left text-sm last:mb-0 hover:bg-accent/70"
                   [style.border-left-color]="entryClientAccent()(entry)"
                   (click)="entryPicked.emit(entry.id)"
                 >
                   <div class="font-medium">{{ entry.projectCode }}{{ entry.orderCode ? ' / ' + entry.orderCode : '' }}</div>
                   <div class="text-xs text-muted-foreground">{{ entry.hours.toFixed(2) }}h · {{ entry.clientName }}</div>
+                  @if (entry.lockedByInvoiceId !== null) {
+                    <span
+                      class="pointer-events-none absolute right-2 top-2 inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500/70"
+                      aria-hidden="true"
+                    ></span>
+                  }
                 </button>
               }
             </div>

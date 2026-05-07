@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, input, output } from '@angular/core';
 import { FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmComboboxImports } from '@spartan-ng/helm/combobox';
@@ -7,43 +7,97 @@ import { CrudSheetFooterComponent } from '../../../../shared/components/crud-she
 
 @Component({
   selector: 'app-time-entry-sheet-form',
-  imports: [ReactiveFormsModule, HlmInputImports, HlmComboboxImports, HlmButtonImports, CrudSheetFooterComponent],
+  imports: [
+    ReactiveFormsModule,
+    HlmInputImports,
+    HlmComboboxImports,
+    HlmButtonImports,
+    CrudSheetFooterComponent,
+  ],
   template: `
-    <form class="flex h-full flex-col gap-4 p-4" [formGroup]="form()" (ngSubmit)="submitted.emit()">
+    <form class="flex h-full flex-col gap-4 p-4" [formGroup]="form()" (ngSubmit)="onSubmit()">
+      @if (isReadOnly()) {
+        <div
+          class="flex items-center gap-2 rounded-md border border-border/60 bg-muted/40 px-3 py-2 text-xs text-muted-foreground"
+          role="status"
+        >
+          <span class="inline-flex h-2 w-2 shrink-0 rounded-full bg-emerald-500/70" aria-hidden="true"></span>
+          <span>
+            Locked by invoice #{{ lockedByInvoiceId() }} — editing and deletion are disabled.
+          </span>
+        </div>
+      }
+
       <label class="grid gap-1 text-sm">
         <span>Client *</span>
-        <div hlmCombobox [value]="selectedClientOption()" [itemToString]="optionToLabel()" [isItemEqualToValue]="isSameOption()" (valueChange)="clientChanged.emit($event)">
-          <hlm-combobox-trigger class="w-full justify-between"><span>{{ selectedClientOption()?.label ?? 'Select client' }}</span></hlm-combobox-trigger>
-          <ng-template hlmComboboxPortal><div hlmComboboxContent><div hlmComboboxList>
-            @for (option of clientOptions(); track option.id) {
-              <hlm-combobox-item [value]="option">{{ option.label }}</hlm-combobox-item>
-            }
-          </div></div></ng-template>
+        <div
+          hlmCombobox
+          [value]="selectedClientOption()"
+          [itemToString]="optionToLabel()"
+          [isItemEqualToValue]="isSameOption()"
+          (valueChange)="clientChanged.emit($event)"
+        >
+          <hlm-combobox-trigger class="w-full justify-between"
+            ><span>{{ selectedClientOption()?.label ?? 'Select client' }}</span></hlm-combobox-trigger
+          >
+          <ng-template hlmComboboxPortal
+            ><div hlmComboboxContent>
+              <div hlmComboboxList>
+                @for (option of clientOptions(); track option.id) {
+                  <hlm-combobox-item [value]="option">{{ option.label }}</hlm-combobox-item>
+                }
+              </div>
+            </div></ng-template
+          >
         </div>
       </label>
 
       <label class="grid gap-1 text-sm">
         <span>Project *</span>
-        <div hlmCombobox [value]="selectedProjectOption()" [itemToString]="optionToLabel()" [isItemEqualToValue]="isSameOption()" (valueChange)="projectChanged.emit($event)">
-          <hlm-combobox-trigger class="w-full justify-between"><span>{{ selectedProjectOption()?.label ?? 'Select project' }}</span></hlm-combobox-trigger>
-          <ng-template hlmComboboxPortal><div hlmComboboxContent><div hlmComboboxList>
-            @for (option of filteredProjectOptions(); track option.id) {
-              <hlm-combobox-item [value]="option">{{ option.label }}</hlm-combobox-item>
-            }
-          </div></div></ng-template>
+        <div
+          hlmCombobox
+          [value]="selectedProjectOption()"
+          [itemToString]="optionToLabel()"
+          [isItemEqualToValue]="isSameOption()"
+          (valueChange)="projectChanged.emit($event)"
+        >
+          <hlm-combobox-trigger class="w-full justify-between"
+            ><span>{{ selectedProjectOption()?.label ?? 'Select project' }}</span></hlm-combobox-trigger
+          >
+          <ng-template hlmComboboxPortal
+            ><div hlmComboboxContent>
+              <div hlmComboboxList>
+                @for (option of filteredProjectOptions(); track option.id) {
+                  <hlm-combobox-item [value]="option">{{ option.label }}</hlm-combobox-item>
+                }
+              </div>
+            </div></ng-template
+          >
         </div>
       </label>
 
       @if (selectedProjectRequiresOrder()) {
         <label class="grid gap-1 text-sm">
           <span>Order *</span>
-          <div hlmCombobox [value]="selectedOrderOption()" [itemToString]="optionToLabel()" [isItemEqualToValue]="isSameOption()" (valueChange)="orderChanged.emit($event)">
-            <hlm-combobox-trigger class="w-full justify-between"><span>{{ selectedOrderOption()?.label ?? 'Select order' }}</span></hlm-combobox-trigger>
-            <ng-template hlmComboboxPortal><div hlmComboboxContent><div hlmComboboxList>
-              @for (option of filteredOrderOptions(); track option.id) {
-                <hlm-combobox-item [value]="option">{{ option.label }}</hlm-combobox-item>
-              }
-            </div></div></ng-template>
+          <div
+            hlmCombobox
+            [value]="selectedOrderOption()"
+            [itemToString]="optionToLabel()"
+            [isItemEqualToValue]="isSameOption()"
+            (valueChange)="orderChanged.emit($event)"
+          >
+            <hlm-combobox-trigger class="w-full justify-between"
+              ><span>{{ selectedOrderOption()?.label ?? 'Select order' }}</span></hlm-combobox-trigger
+            >
+            <ng-template hlmComboboxPortal
+              ><div hlmComboboxContent>
+                <div hlmComboboxList>
+                  @for (option of filteredOrderOptions(); track option.id) {
+                    <hlm-combobox-item [value]="option">{{ option.label }}</hlm-combobox-item>
+                  }
+                </div>
+              </div></ng-template
+            >
           </div>
         </label>
       }
@@ -64,26 +118,36 @@ import { CrudSheetFooterComponent } from '../../../../shared/components/crud-she
         <input hlmInput type="text" formControlName="description" placeholder="Daily work summary" />
       </label>
 
-      @if (form().invalid && (form().touched || form().dirty)) {
+      @if (!isReadOnly() && form().invalid && (form().touched || form().dirty)) {
         <p class="text-sm text-destructive">Please complete all required fields correctly.</p>
       }
 
-      <div class="mt-auto flex items-center justify-between gap-2 border-t border-border/40 pt-3">
-        <app-crud-sheet-footer
-          [isEditing]="isEditing()"
-          [isLoading]="isLoading()"
-          [isValid]="isValid()"
-          createLabel="Create entry"
-          updateLabel="Save changes"
-          (clearRequested)="clearRequested.emit()"
-          (cancelRequested)="cancelRequested.emit()"
-        />
-        @if (isEditing()) {
-          <button hlmBtn variant="outline" type="button" class="cursor-pointer" (click)="deleteRequested.emit()">
-            Delete
+      @if (!isReadOnly()) {
+        <div class="mt-auto flex items-center justify-between gap-2 border-t border-border/40 pt-3">
+          <app-crud-sheet-footer
+            [isEditing]="isEditing()"
+            [isLoading]="isLoading()"
+            [isValid]="isValid()"
+            createLabel="Create entry"
+            updateLabel="Save changes"
+            (clearRequested)="clearRequested.emit()"
+            (cancelRequested)="cancelRequested.emit()"
+          />
+          @if (isEditing()) {
+            <button hlmBtn variant="outline" type="button" class="cursor-pointer" (click)="deleteRequested.emit()">
+              Delete
+            </button>
+          }
+        </div>
+      } @else {
+        <div
+          class="mt-auto flex w-full items-start justify-start gap-2 border-t border-border/40 pt-3 sm:flex-row"
+        >
+          <button hlmBtn variant="outline" type="button" class="cursor-pointer" (click)="cancelRequested.emit()">
+            Close
           </button>
-        }
-      </div>
+        </div>
+      }
     </form>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -91,6 +155,8 @@ import { CrudSheetFooterComponent } from '../../../../shared/components/crud-she
 export class TimeEntrySheetFormComponent {
   readonly form = input.required<FormGroup<any>>();
   readonly isEditing = input.required<boolean>();
+  readonly isReadOnly = input(false);
+  readonly lockedByInvoiceId = input<number | null>(null);
   readonly isLoading = input.required<boolean>();
   readonly isValid = input.required<boolean>();
   readonly clientOptions = input.required<Array<{ id: number; label: string }>>();
@@ -112,4 +178,23 @@ export class TimeEntrySheetFormComponent {
   readonly clearRequested = output<void>();
   readonly cancelRequested = output<void>();
   readonly deleteRequested = output<void>();
+
+  constructor() {
+    effect(() => {
+      const fg = this.form();
+      const readOnly = this.isReadOnly();
+      if (readOnly) {
+        fg.disable({ emitEvent: false });
+      } else {
+        fg.enable({ emitEvent: false });
+      }
+    });
+  }
+
+  protected onSubmit(): void {
+    if (this.isReadOnly()) {
+      return;
+    }
+    this.submitted.emit();
+  }
 }
