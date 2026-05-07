@@ -126,43 +126,48 @@ export type EntryInvoicedSummary = {
             {{ store.error() }}
           </p>
         }
-
-        <app-time-entries-month-summary [monthLabel]="periodLabel()" [monthTotalHours]="periodTotalHours()" />
-
-        @if (showLoadingSpinner()) {
-          <div class="flex items-center justify-center rounded-lg border border-border p-6">
-            <hlm-spinner aria-label="Loading time entries" class="text-muted-foreground"></hlm-spinner>
-          </div>
-        }
-
-        @if (viewMode() === 'month') {
-          <app-time-entries-calendar-grid
-            [weekdayLabels]="weekdayLabels"
-            [calendarDays]="calendarDays()"
-            [entriesForDate]="entriesForDateFn"
-            [dayTotal]="dayTotalFn"
-            [entryClientAccent]="entryClientAccentFn"
-            [entryAccentsForDate]="entryAccentsForDateFn"
-            [entryInvoicedSummary]="entryInvoicedSummaryFn"
-            [formatDayHeading]="formatDayHeadingFn"
-            (addForDate)="openAddForDate($event)"
-            (emailToRequested)="emailDayEntries($event)"
-            (editEntry)="editEntry($event)"
-            (openDayEntriesPicker)="openDayEntriesPicker($event)"
+        <div class="rounded-xl border border-border bg-card p-6 shadow-sm">
+          <app-time-entries-month-summary
+            [monthLabel]="periodLabel()"
+            [monthTotalHours]="periodTotalHours()"
           />
-        } @else {
-          <app-time-entries-week-grid
-            [weekDays]="weekDays()"
-            [entriesForDate]="entriesForDateFn"
-            [dayTotal]="dayTotalFn"
-            [entryClientAccent]="entryClientAccentFn"
-            [formatDayHeading]="formatDayHeadingFn"
-            (addForDate)="openAddForDate($event)"
-            (emailToRequested)="emailDayEntries($event)"
-            (editEntry)="editEntry($event)"
-          />
-        }
+          @if (showLoadingSpinner()) {
+            <div class="flex items-center justify-center rounded-lg border border-border p-6">
+              <hlm-spinner
+                aria-label="Loading time entries"
+                class="text-muted-foreground"
+              ></hlm-spinner>
+            </div>
+          }
 
+          @if (viewMode() === 'month') {
+            <app-time-entries-calendar-grid
+              [weekdayLabels]="weekdayLabels"
+              [calendarDays]="calendarDays()"
+              [entriesForDate]="entriesForDateFn"
+              [dayTotal]="dayTotalFn"
+              [entryClientAccent]="entryClientAccentFn"
+              [entryAccentsForDate]="entryAccentsForDateFn"
+              [entryInvoicedSummary]="entryInvoicedSummaryFn"
+              [formatDayHeading]="formatDayHeadingFn"
+              (addForDate)="openAddForDate($event)"
+              (emailToRequested)="emailDayEntries($event)"
+              (editEntry)="editEntry($event)"
+              (openDayEntriesPicker)="openDayEntriesPicker($event)"
+            />
+          } @else {
+            <app-time-entries-week-grid
+              [weekDays]="weekDays()"
+              [entriesForDate]="entriesForDateFn"
+              [dayTotal]="dayTotalFn"
+              [entryClientAccent]="entryClientAccentFn"
+              [formatDayHeading]="formatDayHeadingFn"
+              (addForDate)="openAddForDate($event)"
+              (emailToRequested)="emailDayEntries($event)"
+              (editEntry)="editEntry($event)"
+            />
+          }
+        </div>
         <button #sheetOpenButton class="hidden" hlmSheetTrigger side="right" type="button"></button>
         <ng-template hlmSheetPortal>
           <hlm-sheet-content class="w-full border-border/40 sm:max-w-xl">
@@ -270,7 +275,10 @@ export class TimeEntriesPage implements OnInit {
   private readonly sheetCloseButton?: ElementRef<HTMLButtonElement>;
 
   protected readonly clientOptions = computed<ClientOption[]>(() =>
-    activeLookup(this.clientsStore.clients()).map((client) => ({ id: client.id, label: client.name })),
+    activeLookup(this.clientsStore.clients()).map((client) => ({
+      id: client.id,
+      label: client.name,
+    })),
   );
   protected readonly projectOptions = computed<ProjectOption[]>(() =>
     activeLookup(this.projectsStore.projects()).map((project) => ({
@@ -312,8 +320,10 @@ export class TimeEntriesPage implements OnInit {
   protected readonly selectedWeekStart = signal(this.startOfWeek(new Date()));
   protected readonly entriesForDateFn = (date: string) => this.entriesForDate(date);
   protected readonly dayTotalFn = (date: string) => this.dayTotal(date);
-  protected readonly entryClientAccentFn = (entry: { clientId: number; clientAccentColor: string | null }) =>
-    this.entryClientAccent(entry);
+  protected readonly entryClientAccentFn = (entry: {
+    clientId: number;
+    clientAccentColor: string | null;
+  }) => this.entryClientAccent(entry);
   protected readonly entryAccentsForDateFn = (date: string) => this.entryAccentsForDate(date);
   protected readonly entryInvoicedSummaryFn = (date: string) => this.entryInvoicedSummary(date);
   protected readonly formatDayHeadingFn = (isoDate: string) => this.formatDayHeading(isoDate);
@@ -359,7 +369,9 @@ export class TimeEntriesPage implements OnInit {
     }
     return this.weekDays().reduce((total, day) => total + this.dayTotal(day.date), 0);
   });
-  protected readonly selectedWeekValue = computed(() => this.toWeekInputValue(this.selectedWeekStart()));
+  protected readonly selectedWeekValue = computed(() =>
+    this.toWeekInputValue(this.selectedWeekStart()),
+  );
   protected readonly selectedWeekLabel = computed(() => {
     const weekStart = this.selectedWeekStart();
     const weekNumber = this.isoWeekNumber(weekStart);
@@ -827,14 +839,18 @@ export class TimeEntriesPage implements OnInit {
         existing.clientEmail = normalizedEmail;
       }
     }
-    return [...byClient.values()].sort((left, right) => left.clientName.localeCompare(right.clientName));
+    return [...byClient.values()].sort((left, right) =>
+      left.clientName.localeCompare(right.clientName),
+    );
   }
 
   private buildEmailBody(
     entries: Array<ReturnType<typeof this.store.entries>[number]>,
     includeDate: boolean,
   ): string {
-    const sorted = [...entries].sort((left, right) => left.date.localeCompare(right.date) || left.id - right.id);
+    const sorted = [...entries].sort(
+      (left, right) => left.date.localeCompare(right.date) || left.id - right.id,
+    );
     return sorted
       .map((entry, index) => {
         const lines = [
@@ -926,9 +942,7 @@ export class TimeEntriesPage implements OnInit {
     d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
     const firstThursday = new Date(d.getFullYear(), 0, 4);
     const firstThursdayAdjusted = new Date(firstThursday);
-    firstThursdayAdjusted.setDate(
-      firstThursday.getDate() + 3 - ((firstThursday.getDay() + 6) % 7),
-    );
+    firstThursdayAdjusted.setDate(firstThursday.getDate() + 3 - ((firstThursday.getDay() + 6) % 7));
     const diffMs = d.getTime() - firstThursdayAdjusted.getTime();
     return 1 + Math.round(diffMs / 604800000);
   }
@@ -939,15 +953,18 @@ export class TimeEntriesPage implements OnInit {
     }
 
     const currentClientId = this.entryForm.controls.clientId.value;
-    const projects = currentClientId === null
-      ? []
-      : this.projectOptions().filter((project) => project.clientId === currentClientId);
+    const projects =
+      currentClientId === null
+        ? []
+        : this.projectOptions().filter((project) => project.clientId === currentClientId);
     if (projects.length === 1) {
       this.entryForm.controls.projectId.setValue(projects[0]?.id ?? null);
     }
 
     const currentProjectId = this.entryForm.controls.projectId.value;
-    const selectedProject = this.projectOptions().find((project) => project.id === currentProjectId);
+    const selectedProject = this.projectOptions().find(
+      (project) => project.id === currentProjectId,
+    );
     if (!selectedProject?.useOrders) {
       this.entryForm.controls.orderId.setValue(null);
       return;
