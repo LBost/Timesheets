@@ -37,6 +37,7 @@ const LINE_ITEM_SELECT =
 
 const TAX_RATE_SELECT =
   'id, code, label, percentage, isActive:is_active, createdAt:created_at';
+const PLACEHOLDER_SEQUENCE_WIDTH = 2;
 
 @Injectable({ providedIn: 'root' })
 export class InvoicesRepository {
@@ -128,8 +129,11 @@ export class InvoicesRepository {
           }, new Map<number, EligibleEntry[]>()))
         : new Map<number, EligibleEntry[]>([[0, entries]]);
 
-    const settings = await this.settingsRepository.getSettings();
-    let nextInvoiceNumber = settings.nextInvoiceNumber;
+    const settings = input.status === InvoiceStatus.OPEN ? await this.settingsRepository.getSettings() : null;
+    let nextInvoiceNumber =
+      input.status === InvoiceStatus.OPEN
+        ? settings!.nextInvoiceNumber
+        : await this.getNextPlaceholderNumber(input.status);
     const createdIds: number[] = [];
 
     for (const [, groupEntries] of grouped) {
@@ -195,13 +199,19 @@ export class InvoicesRepository {
       }
 
       createdIds.push(invoiceRow!.id);
-      nextInvoiceNumber = incrementInvoiceNumber(nextInvoiceNumber);
+      if (input.status === InvoiceStatus.OPEN) {
+        nextInvoiceNumber = incrementInvoiceNumber(nextInvoiceNumber);
+      } else {
+        nextInvoiceNumber = incrementPlaceholderInvoiceNumber(nextInvoiceNumber);
+      }
     }
 
-    await this.settingsRepository.saveSettings({
-      nextInvoiceNumber,
-      preferredTimeEntriesView: settings.preferredTimeEntriesView,
-    });
+    if (settings) {
+      await this.settingsRepository.saveSettings({
+        nextInvoiceNumber,
+        preferredTimeEntriesView: settings.preferredTimeEntriesView,
+      });
+    }
 
     const all = await this.listInvoices();
     return all.filter((invoice) => createdIds.includes(invoice.id));
@@ -308,6 +318,10 @@ export class InvoicesRepository {
     if (currentStatus !== InvoiceStatus.OPEN && input.status === InvoiceStatus.PAID) {
       throw new Error('Only open invoices can be marked as paid.');
     }
+    const draftToOpen =
+      (currentStatus === InvoiceStatus.CONCEPT || currentStatus === InvoiceStatus.PROFORMA) &&
+      input.status === InvoiceStatus.OPEN;
+    const settings = draftToOpen ? await this.settingsRepository.getSettings() : null;
 
     const nowIso = new Date().toISOString();
     const patch: Record<string, unknown> = { status: input.status };
@@ -318,6 +332,9 @@ export class InvoicesRepository {
       patch['opened_at'] = null;
       patch['paid_at'] = null;
       patch['credited_at'] = null;
+    }
+    if (draftToOpen) {
+      patch['invoice_number'] = settings!.nextInvoiceNumber;
     }
 
     const { data: updated, error } = await this.supabase
@@ -354,6 +371,13 @@ export class InvoicesRepository {
           .eq('id', timeEntryId);
         throwIfError(eachLockError, 'Failed to lock time entries.');
       }
+    }
+
+    if (draftToOpen) {
+      await this.settingsRepository.saveSettings({
+        nextInvoiceNumber: incrementInvoiceNumber(settings!.nextInvoiceNumber),
+        preferredTimeEntriesView: settings!.preferredTimeEntriesView,
+      });
     }
 
     if (input.status === InvoiceStatus.CONCEPT || input.status === InvoiceStatus.PROFORMA) {
@@ -608,6 +632,24 @@ export class InvoicesRepository {
     throwIfError(error, 'Failed to load linked time entries.');
     return (rows ?? []).map((row) => row.time_entry_id);
   }
+
+  private async getNextPlaceholderNumber(status: InvoiceStatus.CONCEPT | InvoiceStatus.PROFORMA): Promise<string> {
+    const prefix = placeholderPrefixForStatus(status);
+    const { data: rows, error } = await this.supabase
+      .from('invoices')
+      .select('invoice_number')
+      .returns<Array<{ invoice_number: string }>>();
+    throwIfError(error, 'Failed to load invoice numbers for placeholder assignment.');
+
+    let maxSequence = 0;
+    for (const row of rows ?? []) {
+      const sequence = parsePlaceholderSequence(row.invoice_number, prefix);
+      if (sequence !== null && sequence > maxSequence) {
+        maxSequence = sequence;
+      }
+    }
+    return `${prefix}${String(maxSequence + 1).padStart(PLACEHOLDER_SEQUENCE_WIDTH, '0')}`;
+  }
 }
 
 type EligibleTimeEntryRow = {
@@ -644,4 +686,38 @@ function isoDate(date: Date): string {
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+function placeholderPrefixForStatus(status: InvoiceStatus.CONCEPT | InvoiceStatus.PROFORMA): string {
+  return status === InvoiceStatus.CONCEPT ? 'CONCEPT' : 'PROFORMA';
+}
+
+function parsePlaceholderSequence(invoiceNumber: string, prefix: string): number | null {
+  if (!invoiceNumber.startsWith(prefix)) {
+    return null;
+  }
+  const sequenceRaw = invoiceNumber.slice(prefix.length);
+  if (!/^\d+$/.test(sequenceRaw)) {
+    return null;
+  }
+  const parsed = Number.parseInt(sequenceRaw, 10);
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+function incrementPlaceholderInvoiceNumber(invoiceNumber: string): string {
+  if (invoiceNumber.startsWith('CONCEPT')) {
+    return incrementPlaceholderForPrefix(invoiceNumber, 'CONCEPT');
+  }
+  if (invoiceNumber.startsWith('PROFORMA')) {
+    return incrementPlaceholderForPrefix(invoiceNumber, 'PROFORMA');
+  }
+  throw new Error('Invalid placeholder invoice number format.');
+}
+
+function incrementPlaceholderForPrefix(invoiceNumber: string, prefix: string): string {
+  const sequence = parsePlaceholderSequence(invoiceNumber, prefix);
+  if (sequence === null) {
+    throw new Error('Invalid placeholder invoice number format.');
+  }
+  return `${prefix}${String(sequence + 1).padStart(PLACEHOLDER_SEQUENCE_WIDTH, '0')}`;
 }
