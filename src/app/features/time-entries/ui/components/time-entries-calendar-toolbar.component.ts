@@ -4,10 +4,11 @@ import { HlmDropdownMenuImports } from '@spartan-ng/helm/dropdown-menu';
 import { HlmInputImports } from '@spartan-ng/helm/input';
 import { NgIcon } from '@ng-icons/core';
 import { HlmIcon } from '@spartan-ng/helm/icon';
+import { DropdownMenuSurfaceComponent } from '../../../../shared/components/dropdown-menu-surface/dropdown-menu-surface.component';
 
 @Component({
   selector: 'app-time-entries-calendar-toolbar',
-  imports: [HlmButtonImports, HlmDropdownMenuImports, HlmInputImports, NgIcon, HlmIcon],
+  imports: [HlmButtonImports, HlmDropdownMenuImports, HlmInputImports, NgIcon, HlmIcon, DropdownMenuSurfaceComponent],
   template: `
     <header class="flex flex-wrap items-end justify-between gap-3">
       <div>
@@ -96,12 +97,12 @@ import { HlmIcon } from '@spartan-ng/helm/icon';
           <ng-icon hlm size="sm" name="lucideEllipsis" />
         </button>
         <ng-template #periodActionMenu>
-          <hlm-dropdown-menu>
+          <app-dropdown-menu-surface>
             <button hlmDropdownMenuItem (triggered)="emailToRequested.emit()">
               <ng-icon hlm size="sm" name="lucideMail" aria-hidden="true" />
               Email to
             </button>
-          </hlm-dropdown-menu>
+          </app-dropdown-menu-surface>
         </ng-template>
         <button
           hlmBtn

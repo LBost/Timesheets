@@ -4,6 +4,7 @@ import { lucideEllipsis, lucideLayers, lucideMail, lucidePlus } from '@ng-icons/
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmDropdownMenuImports } from '@spartan-ng/helm/dropdown-menu';
 import { HlmIcon } from '@spartan-ng/helm/icon';
+import { DropdownMenuSurfaceComponent } from '../../../../shared/components/dropdown-menu-surface/dropdown-menu-surface.component';
 
 export type EntryInvoicedSummaryState = {
   state: 'none' | 'partial' | 'all';
@@ -19,7 +20,7 @@ type CalendarDay = {
 
 @Component({
   selector: 'app-time-entries-calendar-grid',
-  imports: [HlmButtonImports, HlmDropdownMenuImports, NgIcon, HlmIcon],
+  imports: [HlmButtonImports, HlmDropdownMenuImports, NgIcon, HlmIcon, DropdownMenuSurfaceComponent],
   providers: [provideIcons({ lucidePlus, lucideLayers, lucideEllipsis, lucideMail })],
   template: `
     <div class="overflow-hidden rounded-lg border border-border">
@@ -43,12 +44,12 @@ type CalendarDay = {
                     <ng-icon hlm name="lucideEllipsis" size="sm" aria-hidden="true" />
                   </button>
                   <ng-template #dayMenu>
-                    <hlm-dropdown-menu>
+                    <app-dropdown-menu-surface>
                       <button hlmDropdownMenuItem (triggered)="emailToRequested.emit(day.date)">
                         <ng-icon hlm name="lucideMail" size="sm" aria-hidden="true" />
                         Email to
                       </button>
-                    </hlm-dropdown-menu>
+                    </app-dropdown-menu-surface>
                   </ng-template>
                   <button hlmBtn variant="ghost" size="icon" type="button" class="cursor-pointer" (click)="addForDate.emit(day.date)">
                     <ng-icon hlm name="lucidePlus" size="sm" aria-hidden="true" />

@@ -32,6 +32,7 @@ import {
 import type { EntityTableRow } from './entity-table-row.model';
 export type { EntityTableRow } from './entity-table-row.model';
 import { RowContextMenuComponent } from '../row-context-menu/row-context-menu.component';
+import { DropdownMenuSurfaceComponent } from '../dropdown-menu-surface/dropdown-menu-surface.component';
 import { DataTableSelectCellComponent } from './data-table-select-cell.component';
 import { DataTableSelectHeadComponent } from './data-table-select-head.component';
 
@@ -74,6 +75,7 @@ function defaultGlobalFilterRowText(row: EntityTableRow): string {
     HlmTableImports,
     NgIcon,
     RowContextMenuComponent,
+    DropdownMenuSurfaceComponent,
   ],
   providers: [
     provideIcons({
@@ -126,7 +128,7 @@ function defaultGlobalFilterRowText(row: EntityTableRow): string {
           <ng-icon hlm name="lucideChevronDown" class="ms-2" size="sm" />
         </button>
         <ng-template #colMenu>
-          <hlm-dropdown-menu class="w-40">
+          <app-dropdown-menu-surface className="w-40">
             @for (column of hidableColumns(); track column.id) {
               <button
                 hlmDropdownMenuCheckbox
@@ -138,7 +140,7 @@ function defaultGlobalFilterRowText(row: EntityTableRow): string {
                 {{ columnMenuLabel(column) }}
               </button>
             }
-          </hlm-dropdown-menu>
+          </app-dropdown-menu-surface>
         </ng-template>
       </div>
     </div>
