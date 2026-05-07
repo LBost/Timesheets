@@ -88,6 +88,141 @@ import { InvoicesTableComponent } from './components/invoices-table.component';
         </ng-template>
       </hlm-sheet>
 
+      <hlm-sheet>
+        <button #editSheetOpenButton class="hidden" hlmSheetTrigger side="right" type="button"></button>
+        <ng-template hlmSheetPortal>
+          <hlm-sheet-content class="w-full border-border/40 sm:max-w-5xl">
+            <div hlmSheetHeader>
+              <h2 hlmSheetTitle>Edit invoice</h2>
+            </div>
+            @if (store.selectedInvoice(); as invoice) {
+              <form class="flex h-full flex-col gap-5 py-4" [formGroup]="editForm" (ngSubmit)="saveInvoiceEdit()">
+                <div class="grid gap-4 text-sm sm:grid-cols-4">
+                  <div>
+                    <p class="text-muted-foreground">Invoice</p>
+                    <p class="font-medium">{{ invoice.invoiceNumber }}</p>
+                  </div>
+                  <div>
+                    <p class="text-muted-foreground">Client</p>
+                    <p class="font-medium">{{ invoice.clientName }}</p>
+                  </div>
+                  <div>
+                    <p class="text-muted-foreground">Period</p>
+                    <p class="font-medium">{{ invoice.periodStart }} - {{ invoice.periodEnd }}</p>
+                  </div>
+                  <label class="grid gap-1">
+                    <span>Status *</span>
+                    <div
+                      hlmCombobox
+                      [value]="selectedEditStatusOption()"
+                      [itemToString]="optionToLabel"
+                      [isItemEqualToValue]="isSameValueOption"
+                      (valueChange)="onEditStatusValueChange($event)"
+                    >
+                      <hlm-combobox-trigger class="w-full justify-between">
+                        <span>{{ selectedEditStatusOption()?.label ?? 'Select status' }}</span>
+                      </hlm-combobox-trigger>
+                      <ng-template hlmComboboxPortal>
+                        <div hlmComboboxContent>
+                          <div hlmComboboxList>
+                            @for (status of statusOptions; track status.value) {
+                              <hlm-combobox-item [value]="status">{{ status.label }}</hlm-combobox-item>
+                            }
+                          </div>
+                        </div>
+                      </ng-template>
+                    </div>
+                  </label>
+                </div>
+
+                <div class="min-h-0 flex-1 rounded-md border border-border p-3">
+                  <p class="text-sm font-semibold">Line items</p>
+                  <p class="text-xs text-muted-foreground">{{ invoice.lineItemCount }} linked line item(s)</p>
+                  <div class="mt-2 overflow-auto rounded-md border border-border">
+                    <table class="w-full min-w-[980px] table-fixed text-sm">
+                      <colgroup>
+                        <col class="w-[16%]" />
+                        <col class="w-[44%]" />
+                        <col class="w-[10%]" />
+                        <col class="w-[10%]" />
+                        <col class="w-[10%]" />
+                        <col class="w-[10%]" />
+                      </colgroup>
+                      <thead class="bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                        <tr>
+                          <th class="px-3 py-2 font-medium">Period</th>
+                          <th class="px-3 py-2 font-medium">Project / Order</th>
+                          <th class="px-3 py-2 text-right font-medium">Hours</th>
+                          <th class="px-3 py-2 text-right font-medium">Net</th>
+                          <th class="px-3 py-2 text-right font-medium">VAT</th>
+                          <th class="px-3 py-2 text-right font-medium">Gross</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (line of store.selectedLineItems(); track line.id) {
+                          <tr class="border-t border-border/60">
+                            <td class="px-3 py-2 align-top whitespace-nowrap">{{ line.workDate }}</td>
+                            <td class="px-3 py-2 align-top">
+                              <div>{{ invoiceLineProjectLabel(line) }}</div>
+                              @if (line.description) {
+                                <div class="text-xs text-muted-foreground">{{ line.description }}</div>
+                              }
+                            </td>
+                            <td class="px-3 py-2 text-right align-top tabular-nums whitespace-nowrap">
+                              {{ formatHours(line.hours) }}
+                            </td>
+                            <td class="px-3 py-2 text-right align-top tabular-nums whitespace-nowrap">
+                              {{ formatMoney(line.lineNet) }}
+                            </td>
+                            <td class="px-3 py-2 text-right align-top tabular-nums whitespace-nowrap">
+                              {{ formatMoney(line.taxAmount) }}
+                            </td>
+                            <td class="px-3 py-2 text-right align-top tabular-nums whitespace-nowrap">
+                              {{ formatMoney(line.lineGross) }}
+                            </td>
+                          </tr>
+                        } @empty {
+                          <tr class="border-t border-border/60">
+                            <td class="px-3 py-8 text-center text-muted-foreground" colspan="6">
+                              No line items linked to this invoice.
+                            </td>
+                          </tr>
+                        }
+                      </tbody>
+                      <tfoot class="border-t border-border bg-muted/20">
+                        <tr>
+                          <td class="px-3 py-2 text-xs font-semibold uppercase text-muted-foreground" colspan="3">
+                            Totals
+                          </td>
+                          <td class="px-3 py-2 text-right font-semibold tabular-nums whitespace-nowrap">
+                            {{ formatMoney(selectedLineTotals().net) }}
+                          </td>
+                          <td class="px-3 py-2 text-right font-semibold tabular-nums whitespace-nowrap">
+                            {{ formatMoney(selectedLineTotals().tax) }}
+                          </td>
+                          <td class="px-3 py-2 text-right font-semibold tabular-nums whitespace-nowrap">
+                            {{ formatMoney(selectedLineTotals().gross) }}
+                          </td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                </div>
+
+                <div class="mt-auto flex flex-wrap justify-start gap-2 border-t border-border pt-4">
+                  <button hlmBtn type="submit" [disabled]="store.isLoading() || editForm.invalid">Save</button>
+                  <button hlmBtn type="button" variant="secondary" (click)="resetEditForm()">Reset</button>
+                  <button hlmBtn type="button" variant="outline" (click)="cancelEditSheet()">Cancel</button>
+                </div>
+              </form>
+            } @else {
+              <p class="py-4 text-sm text-muted-foreground">Select an invoice to edit.</p>
+            }
+            <button #editSheetCloseButton class="hidden" hlmSheetClose type="button"></button>
+          </hlm-sheet-content>
+        </ng-template>
+      </hlm-sheet>
+
       <div hlmSeparator></div>
 
       <app-invoices-state-messages [storeError]="store.error()" />
@@ -95,25 +230,9 @@ import { InvoicesTableComponent } from './components/invoices-table.component';
       <app-invoices-table
         [invoices]="store.invoices()"
         (addRequested)="openGenerateSheet()"
-        (editRequested)="selectInvoice($event)"
+        (editRequested)="openEditInvoice($event)"
         (deleteRequested)="deleteInvoice($event)"
       />
-
-      @if (store.selectedInvoiceId() !== null && store.selectedLineItems().length > 0) {
-        <section class="rounded-md border border-border p-3">
-          <p class="text-sm font-semibold">Selected invoice line items</p>
-          <div class="mt-2 space-y-1">
-            @for (line of store.selectedLineItems(); track line.id) {
-              <p class="text-xs text-muted-foreground">
-                {{ line.workDate }} · {{ line.projectCode }} · {{ line.description || '-' }} · net
-                {{ line.lineNet }} · tax {{ line.taxCodeSnapshot }} ({{
-                  formatTax(line.taxPercentageSnapshot)
-                }})
-              </p>
-            }
-          </div>
-        </section>
-      }
 
       <hlm-dialog
         [state]="previewDialogState()"
@@ -292,7 +411,18 @@ export class InvoicesPage implements OnInit {
   private readonly sheetOpenButton?: ElementRef<HTMLButtonElement>;
   @ViewChild('sheetCloseButton', { read: ElementRef })
   private readonly sheetCloseButton?: ElementRef<HTMLButtonElement>;
+  @ViewChild('editSheetOpenButton', { read: ElementRef })
+  private readonly editSheetOpenButton?: ElementRef<HTMLButtonElement>;
+  @ViewChild('editSheetCloseButton', { read: ElementRef })
+  private readonly editSheetCloseButton?: ElementRef<HTMLButtonElement>;
   protected readonly invoiceStatus = InvoiceStatus;
+  protected readonly statusOptions = [
+    { label: 'Concept', value: InvoiceStatus.CONCEPT },
+    { label: 'Proforma', value: InvoiceStatus.PROFORMA },
+    { label: 'Open', value: InvoiceStatus.OPEN },
+    { label: 'Paid', value: InvoiceStatus.PAID },
+    { label: 'Credited', value: InvoiceStatus.CREDITED },
+  ] as const;
   protected readonly initialStatusOptions = [
     { label: 'Concept', value: InvoiceStatus.CONCEPT },
     { label: 'Proforma', value: InvoiceStatus.PROFORMA },
@@ -321,7 +451,18 @@ export class InvoicesPage implements OnInit {
   protected readonly periodOptions = computed(() =>
     this.store.availablePeriods().map((period) => ({ label: period.label, value: period.key })),
   );
+  protected readonly selectedLineTotals = computed(() =>
+    this.store.selectedLineItems().reduce(
+      (totals, line) => ({
+        net: totals.net + line.lineNet,
+        tax: totals.tax + line.taxAmount,
+        gross: totals.gross + line.lineGross,
+      }),
+      { net: 0, tax: 0, gross: 0 },
+    ),
+  );
   protected readonly previewDialogState = signal<'open' | 'closed'>('closed');
+  private readonly editingInvoiceId = signal<number | null>(null);
   private readonly selectedPreviewStatus = signal<
     InvoiceStatus.CONCEPT | InvoiceStatus.PROFORMA | InvoiceStatus.OPEN
   >(InvoiceStatus.CONCEPT);
@@ -332,6 +473,9 @@ export class InvoicesPage implements OnInit {
     periodKey: ['', [Validators.required]],
     mode: ['per_project' as InvoiceGenerateMode, [Validators.required]],
     taxRateId: [0, [Validators.required, Validators.min(1)]],
+  });
+  protected readonly editForm = this.formBuilder.group({
+    status: [InvoiceStatus.CONCEPT as InvoiceStatusUpdateInput['status'], [Validators.required]],
   });
 
   async ngOnInit(): Promise<void> {
@@ -396,21 +540,73 @@ export class InvoicesPage implements OnInit {
       | InvoiceStatus.OPEN
       | InvoiceStatus.PAID
       | InvoiceStatus.CREDITED,
-  ): Promise<void> {
-    const confirmationMessage = this.statusConfirmationMessage(status);
+  ): Promise<boolean> {
+    const currentStatus =
+      this.store.invoices().find((invoice) => invoice.id === invoiceId)?.status ??
+      this.store.selectedInvoice()?.status;
+    const confirmationMessage = this.statusConfirmationMessage(status, currentStatus);
     if (confirmationMessage && !window.confirm(confirmationMessage)) {
-      return;
+      return false;
     }
 
     const payload: InvoiceStatusUpdateInput = { status };
     await this.store.updateStatus(invoiceId, payload);
     if (!this.store.error()) {
       this.toast.show(`Invoice status updated to ${status}.`, 'success');
+      return true;
     }
+    return false;
   }
 
   protected async selectInvoice(invoiceId: number): Promise<void> {
     await this.store.selectInvoice(invoiceId);
+  }
+
+  protected async openEditInvoice(invoiceId: number): Promise<void> {
+    await this.store.selectInvoice(invoiceId);
+    const invoice = this.store.selectedInvoice();
+    if (!invoice) {
+      this.toast.show('Invoice not found.', 'info');
+      return;
+    }
+
+    this.editingInvoiceId.set(invoiceId);
+    this.editForm.controls.status.setValue(invoice.status);
+    this.editSheetOpenButton?.nativeElement.click();
+  }
+
+  protected async saveInvoiceEdit(): Promise<void> {
+    if (this.editForm.invalid) {
+      this.editForm.markAllAsTouched();
+      return;
+    }
+    const invoiceId = this.editingInvoiceId();
+    const status = this.editForm.controls.status.value;
+    const currentStatus = this.store.selectedInvoice()?.status;
+    if (invoiceId === null || !status) {
+      return;
+    }
+    if (status === currentStatus) {
+      this.cancelEditSheet();
+      return;
+    }
+
+    const updated = await this.setStatus(invoiceId, status);
+    if (updated) {
+      this.cancelEditSheet();
+    }
+  }
+
+  protected resetEditForm(): void {
+    const invoice = this.store.selectedInvoice();
+    if (invoice) {
+      this.editForm.controls.status.setValue(invoice.status);
+    }
+  }
+
+  protected cancelEditSheet(): void {
+    this.editingInvoiceId.set(null);
+    this.editSheetCloseButton?.nativeElement.click();
   }
 
   protected async deleteInvoice(invoiceId: number): Promise<void> {
@@ -498,6 +694,17 @@ export class InvoicesPage implements OnInit {
     this.generationForm.controls.mode.setValue(option?.value ?? 'per_project');
   }
 
+  protected selectedEditStatusOption(): { label: string; value: InvoiceStatusUpdateInput['status'] } | null {
+    const value = this.editForm.controls.status.value;
+    return this.statusOptions.find((option) => option.value === value) ?? null;
+  }
+
+  protected onEditStatusValueChange(
+    option: { label: string; value: InvoiceStatusUpdateInput['status'] } | null,
+  ): void {
+    this.editForm.controls.status.setValue(option?.value ?? InvoiceStatus.CONCEPT);
+  }
+
   protected selectedPreviewStatusOption():
     | { label: string; value: InvoiceStatus.CONCEPT | InvoiceStatus.PROFORMA | InvoiceStatus.OPEN }
     | null {
@@ -568,14 +775,22 @@ export class InvoicesPage implements OnInit {
       | InvoiceStatus.OPEN
       | InvoiceStatus.PAID
       | InvoiceStatus.CREDITED,
+    currentStatus?: InvoiceStatus,
   ): string {
+    if (status === currentStatus) {
+      return '';
+    }
     switch (status) {
       case InvoiceStatus.OPEN:
-        return 'Open this invoice now? This locks linked time entries and cannot be undone.';
+        return 'Open this invoice now? This locks linked time entries.';
       case InvoiceStatus.CONCEPT:
-        return 'Revert this invoice to concept? This will unlock linked time entries.';
+        return currentStatus === InvoiceStatus.OPEN
+          ? 'Revert this invoice to concept? This will unlock linked time entries.'
+          : '';
       case InvoiceStatus.PROFORMA:
-        return 'Revert this invoice to proforma? This will unlock linked time entries.';
+        return currentStatus === InvoiceStatus.OPEN
+          ? 'Revert this invoice to proforma? This will unlock linked time entries.'
+          : '';
       case InvoiceStatus.PAID:
         return 'Mark this invoice as paid?';
       case InvoiceStatus.CREDITED:
@@ -601,6 +816,10 @@ export class InvoicesPage implements OnInit {
 
   protected previewPeriodLabel(): string {
     return this.selectedPeriodOption()?.label ?? '-';
+  }
+
+  protected invoiceLineProjectLabel(line: { projectCode: string; orderCode: string | null }): string {
+    return line.orderCode ?? line.projectCode;
   }
 
   protected previewLineProjectLabel(line: {

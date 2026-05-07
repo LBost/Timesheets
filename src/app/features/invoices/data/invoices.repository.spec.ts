@@ -147,6 +147,31 @@ describe('InvoicesRepository', () => {
     expect(created.length).toBeGreaterThan(0);
   });
 
+  it('updates a concept invoice to proforma', async () => {
+    const repository = configure({
+      invoices: [
+        {
+          id: 1,
+          user_id: USER_ID,
+          client_id: 1,
+          invoice_number: 'INV-20260001',
+          status: InvoiceStatus.CONCEPT,
+          period_start: '2026-05-01',
+          period_end: '2026-06-01',
+          issue_date: '2026-05-31',
+          subtotal_net: 200,
+          total_tax: 38,
+          total_gross: 238,
+          opened_at: null,
+        },
+      ],
+    });
+
+    const updated = await repository.updateStatus(1, { status: InvoiceStatus.PROFORMA });
+
+    expect(updated?.status).toBe(InvoiceStatus.PROFORMA);
+  });
+
   it('deletes open invoice and unlocks linked entries', async () => {
     const repository = configure({
       time_entries: [

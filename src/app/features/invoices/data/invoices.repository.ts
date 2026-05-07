@@ -305,12 +305,6 @@ export class InvoicesRepository {
     if (currentStatus !== InvoiceStatus.OPEN && input.status === InvoiceStatus.PAID) {
       throw new Error('Only open invoices can be marked as paid.');
     }
-    if (
-      (input.status === InvoiceStatus.CONCEPT || input.status === InvoiceStatus.PROFORMA) &&
-      currentStatus !== InvoiceStatus.OPEN
-    ) {
-      throw new Error('Only open invoices can be reverted to concept or proforma.');
-    }
 
     const nowIso = new Date().toISOString();
     const patch: Record<string, unknown> = { status: input.status };
