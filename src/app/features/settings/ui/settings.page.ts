@@ -57,7 +57,10 @@ import {
           </label>
 
           <div class="grid gap-1.5 text-sm">
-            <span class="font-medium">Default time entries view *</span>
+            <h2 class="text-lg font-semibold">Time entries</h2>
+            <p class="text-sm text-muted-foreground">
+              Set the default view for the time entries page.
+            </p>
             <div class="inline-flex w-fit items-center rounded-md border border-border p-1">
               <button
                 hlmBtn
@@ -80,7 +83,6 @@ import {
                 Week
               </button>
             </div>
-            <span class="text-xs text-muted-foreground">Sets the default Time Entries page view.</span>
           </div>
 
           @if (nextInvoiceNumberControl.touched && nextInvoiceNumberControl.invalid) {
@@ -124,7 +126,13 @@ import {
           </div>
 
           <div class="flex flex-wrap items-center gap-2">
-            <button hlmBtn type="button" variant="outline" [disabled]="isBusy()" (click)="createBackupFile()">
+            <button
+              hlmBtn
+              type="button"
+              variant="outline"
+              [disabled]="isBusy()"
+              (click)="createBackupFile()"
+            >
               Create backup
             </button>
             <button
@@ -145,14 +153,6 @@ import {
             />
           </div>
         </div>
-      </div>
-
-      <div class="rounded-lg border border-border/60 bg-muted/20 p-4">
-        <h3 class="text-sm font-semibold">Planned behavior</h3>
-        <p class="mt-1 text-sm text-muted-foreground">
-          On invoice creation, the current next invoice number should be used and then incremented.
-          Implementation steps are documented in the settings feature notes.
-        </p>
       </div>
     </section>
   `,
