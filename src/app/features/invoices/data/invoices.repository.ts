@@ -8,6 +8,9 @@ import { incrementInvoiceNumber } from '../../settings/data/invoice-number.util'
 import { SettingsRepository } from '../../settings/data/settings.repository';
 import {
   InvoiceGenerateInput,
+  InvoicePeriodOption,
+  InvoicePreviewModel,
+  InvoicePreviewRequest,
   InvoiceLineItemModel,
   InvoiceModel,
   InvoiceStatus,
@@ -141,6 +144,7 @@ export class InvoicesRepository {
           subtotal_net: totals.subtotalNet,
           total_tax: totals.totalTax,
           total_gross: totals.totalGross,
+          opened_at: input.status === InvoiceStatus.OPEN ? new Date().toISOString() : null,
         })
         .select(INVOICE_SELECT)
         .single<InvoiceRow>();
@@ -171,6 +175,22 @@ export class InvoicesRepository {
 
       const { error: lineItemError } = await this.supabase.from('invoice_line_items').insert(lineItemsPayload);
       throwIfError(lineItemError, 'Failed to create invoice line items.');
+
+      if (input.status === InvoiceStatus.OPEN) {
+        const nowIso = new Date().toISOString();
+        const timeEntryIds = groupEntries.map((entry) => entry.id);
+        for (const timeEntryId of timeEntryIds) {
+          const { error: lockError } = await this.supabase
+            .from('time_entries')
+            .update({
+              locked_by_invoice_id: invoiceRow!.id,
+              locked_at: nowIso,
+            })
+            .eq('id', timeEntryId);
+          throwIfError(lockError, 'Failed to lock time entries.');
+        }
+      }
+
       createdIds.push(invoiceRow!.id);
       nextInvoiceNumber = incrementInvoiceNumber(nextInvoiceNumber);
     }
@@ -182,6 +202,78 @@ export class InvoicesRepository {
 
     const all = await this.listInvoices();
     return all.filter((invoice) => createdIds.includes(invoice.id));
+  }
+
+  async listAvailablePeriods(clientId: number): Promise<InvoicePeriodOption[]> {
+    const entries = await this.listEligibleEntriesForClient(clientId);
+    if (entries.length === 0) {
+      return [];
+    }
+
+    const periods = new Map<string, InvoicePeriodOption>();
+    for (const entry of entries) {
+      const period = this.periodForEntry(entry.date, entry.billingModel);
+      if (!periods.has(period.key)) {
+        periods.set(period.key, period);
+      }
+    }
+    return [...periods.values()].sort((a, b) => b.periodStart.localeCompare(a.periodStart));
+  }
+
+  async previewInvoices(input: InvoicePreviewRequest): Promise<InvoicePreviewModel[]> {
+    const taxRate = await this.getTaxRateById(input.taxRateId);
+    if (!taxRate || !taxRate.isActive) {
+      throw new Error('Selected tax rate is not available.');
+    }
+
+    const entries = await this.listEligibleEntries(
+      input.clientId,
+      input.periodStart,
+      input.periodEnd,
+      input.billingModel,
+    );
+    if (entries.length === 0) {
+      return [];
+    }
+
+    const grouped =
+      input.mode === 'per_project'
+        ? new Map<number, EligibleEntry[]>(entries.reduce((acc, entry) => {
+            const list = acc.get(entry.project_id) ?? [];
+            list.push(entry);
+            acc.set(entry.project_id, list);
+            return acc;
+          }, new Map<number, EligibleEntry[]>()))
+        : new Map<number, EligibleEntry[]>([[0, entries]]);
+
+    const previews: InvoicePreviewModel[] = [];
+    for (const [groupKey, groupEntries] of grouped) {
+      const lineItems = groupEntries.map((entry) => {
+        const lineNet = entry.hours * entry.unit_rate;
+        const taxAmount = Math.round((lineNet * taxRate.percentage) / 10000);
+        return {
+          timeEntryId: entry.id,
+          projectId: entry.project_id,
+          orderId: entry.order_id,
+          description: entry.description ?? '',
+          workDate: entry.date,
+          hours: entry.hours,
+          unitRate: entry.unit_rate,
+          lineNet,
+          taxAmount,
+          lineGross: lineNet + taxAmount,
+        };
+      });
+      previews.push({
+        groupKey: String(groupKey),
+        subtotalNet: lineItems.reduce((sum, item) => sum + item.lineNet, 0),
+        totalTax: lineItems.reduce((sum, item) => sum + item.taxAmount, 0),
+        totalGross: lineItems.reduce((sum, item) => sum + item.lineGross, 0),
+        lineItems,
+      });
+    }
+
+    return previews;
   }
 
   async updateStatus(id: number, input: InvoiceStatusUpdateInput): Promise<InvoiceVM | null> {
@@ -384,7 +476,80 @@ export class InvoicesRepository {
           unit_rate: project.unit_rate,
         };
       })
-      .filter((entry): entry is EligibleEntry => entry !== null);
+      .filter((entry): entry is EligibleEntry & { billingModel: BillingModel } => entry !== null);
+  }
+
+  private async listEligibleEntriesForClient(clientId: number): Promise<EligibleEntryWithBilling[]> {
+    const { data: entries, error } = await this.supabase
+      .from('time_entries')
+      .select('id, client_id, project_id, order_id, date, hours, description, locked_by_invoice_id')
+      .eq('client_id', clientId)
+      .returns<EligibleTimeEntryRow[]>();
+    throwIfError(error, 'Failed to load eligible time entries.');
+    if (!entries || entries.length === 0) {
+      return [];
+    }
+
+    const { data: projects, error: projectError } = await this.supabase
+      .from('projects')
+      .select('id, unit_rate, billing_model, is_active')
+      .returns<Array<{ id: number; unit_rate: number; billing_model: BillingModel | null; is_active: boolean }>>();
+    throwIfError(projectError, 'Failed to load project details.');
+    const projectsById = new Map((projects ?? []).map((project) => [project.id, project]));
+
+    return entries
+      .map((entry) => {
+        const project = projectsById.get(entry.project_id);
+        if (entry.locked_by_invoice_id !== null || !project || !project.is_active || !project.billing_model) {
+          return null;
+        }
+        return {
+          ...entry,
+          unit_rate: project.unit_rate,
+          billingModel: project.billing_model,
+        };
+      })
+      .filter((entry): entry is EligibleEntryWithBilling => entry !== null);
+  }
+
+  private periodForEntry(dateIso: string, billingModel: BillingModel): InvoicePeriodOption {
+    const date = new Date(`${dateIso}T00:00:00`);
+    if (billingModel === BillingModel.MONTH) {
+      const start = new Date(date.getFullYear(), date.getMonth(), 1);
+      const end = new Date(date.getFullYear(), date.getMonth() + 1, 1);
+      const monthLabel = start.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+      return {
+        key: `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`,
+        label: monthLabel,
+        billingModel,
+        periodStart: isoDate(start),
+        periodEnd: isoDate(end),
+      };
+    }
+    if (billingModel === BillingModel.YEAR) {
+      const year = date.getFullYear();
+      return {
+        key: String(year),
+        label: String(year),
+        billingModel,
+        periodStart: `${year}-01-01`,
+        periodEnd: `${year + 1}-01-01`,
+      };
+    }
+
+    const day = date.getDay();
+    const distance = day === 0 ? 6 : day - 1;
+    const start = new Date(date);
+    start.setDate(date.getDate() - distance);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 7);
+    return {
+      key: isoDate(start),
+      label: `Week of ${isoDate(start)}`,
+      billingModel,
+      periodStart: isoDate(start),
+      periodEnd: isoDate(end),
+    };
   }
 
   private async getClientNamesById(clientId?: number): Promise<Map<number, string>> {
@@ -452,6 +617,7 @@ type EligibleTimeEntryRow = {
 };
 
 type EligibleEntry = EligibleTimeEntryRow & { unit_rate: number };
+type EligibleEntryWithBilling = EligibleEntry & { billingModel: BillingModel };
 
 function calculateTotals(entries: EligibleEntry[], taxPercentage: number) {
   let subtotalNet = 0;

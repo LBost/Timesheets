@@ -52,9 +52,47 @@ export interface InvoiceGenerateInput {
   billingModel: BillingModel;
   periodStart: string;
   periodEnd: string;
-  status: InvoiceStatus.CONCEPT | InvoiceStatus.PROFORMA;
+  status: InvoiceStatus.CONCEPT | InvoiceStatus.PROFORMA | InvoiceStatus.OPEN;
   mode: InvoiceGenerateMode;
   taxRateId: number;
+}
+
+export interface InvoicePreviewRequest {
+  clientId: number;
+  billingModel: BillingModel;
+  periodStart: string;
+  periodEnd: string;
+  mode: InvoiceGenerateMode;
+  taxRateId: number;
+}
+
+export interface InvoicePreviewLineItem {
+  timeEntryId: number;
+  projectId: number;
+  orderId: number | null;
+  description: string;
+  workDate: string;
+  hours: number;
+  unitRate: number;
+  lineNet: number;
+  taxAmount: number;
+  lineGross: number;
+}
+
+export interface InvoicePreviewModel {
+  groupKey: string;
+  subtotalNet: number;
+  totalTax: number;
+  totalGross: number;
+  lineItems: InvoicePreviewLineItem[];
+}
+
+export interface InvoicePeriodOption {
+  key: string;
+  label: string;
+  billingModel: BillingModel;
+  periodStart: string;
+  periodEnd: string;
 }
 
 export interface InvoiceStatusUpdateInput {

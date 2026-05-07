@@ -1,20 +1,12 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  OnInit,
-  computed,
-  inject,
-  signal,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmComboboxImports } from '@spartan-ng/helm/combobox';
-import { HlmInputImports } from '@spartan-ng/helm/input';
+import { HlmDialogImports } from '@spartan-ng/helm/dialog';
 import { HlmSeparatorImports } from '@spartan-ng/helm/separator';
 import { ToastService } from '../../../core/feedback/toast.service';
 import { activeLookup } from '../../../shared/components/combobox-selection/combobox-selection.util';
 import { ClientsStore } from '../../clients/state/clients.store';
-import { BillingModel } from '../../projects/models/project.model';
 import {
   InvoiceGenerateMode,
   InvoiceGenerateInput,
@@ -28,9 +20,9 @@ import { InvoicesStore } from '../state/invoices.store';
   imports: [
     ReactiveFormsModule,
     HlmButtonImports,
-    HlmInputImports,
     HlmSeparatorImports,
     HlmComboboxImports,
+    HlmDialogImports,
   ],
   template: `
     <section class="mx-auto flex w-full max-w-6xl flex-col gap-6">
@@ -73,29 +65,6 @@ import { InvoicesStore } from '../state/invoices.store';
             </div>
           </label>
           <label class="grid gap-1 text-sm">
-            <span>Billing model *</span>
-            <div
-              hlmCombobox
-              [value]="selectedBillingModelOption()"
-              [itemToString]="optionToLabel"
-              [isItemEqualToValue]="isSameValueOption"
-              (valueChange)="onBillingModelValueChange($event)"
-            >
-              <hlm-combobox-trigger class="w-full justify-between">
-                <span>{{ selectedBillingModelOption()?.label ?? 'Select billing model' }}</span>
-              </hlm-combobox-trigger>
-              <ng-template hlmComboboxPortal>
-                <div hlmComboboxContent>
-                  <div hlmComboboxList>
-                    @for (option of billingModelOptions; track option.value) {
-                      <hlm-combobox-item [value]="option">{{ option.label }}</hlm-combobox-item>
-                    }
-                  </div>
-                </div>
-              </ng-template>
-            </div>
-          </label>
-          <label class="grid gap-1 text-sm">
             <span>VAT rate *</span>
             <div
               hlmCombobox
@@ -119,32 +88,24 @@ import { InvoicesStore } from '../state/invoices.store';
             </div>
           </label>
         </div>
-        <div class="grid grid-cols-1 gap-3 md:grid-cols-4">
+        <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
           <label class="grid gap-1 text-sm">
-            <span>Period start *</span>
-            <input hlmInput type="date" formControlName="periodStart" />
-          </label>
-          <label class="grid gap-1 text-sm">
-            <span>Period end *</span>
-            <input hlmInput type="date" formControlName="periodEnd" />
-          </label>
-          <label class="grid gap-1 text-sm">
-            <span>Initial status *</span>
+            <span>Period *</span>
             <div
               hlmCombobox
-              [value]="selectedInitialStatusOption()"
+              [value]="selectedPeriodOption()"
               [itemToString]="optionToLabel"
               [isItemEqualToValue]="isSameValueOption"
-              (valueChange)="onInitialStatusValueChange($event)"
+              (valueChange)="onPeriodValueChange($event)"
             >
               <hlm-combobox-trigger class="w-full justify-between">
-                <span>{{ selectedInitialStatusOption()?.label ?? 'Select status' }}</span>
+                <span>{{ selectedPeriodOption()?.label ?? 'Select period' }}</span>
               </hlm-combobox-trigger>
               <ng-template hlmComboboxPortal>
                 <div hlmComboboxContent>
                   <div hlmComboboxList>
-                    @for (status of initialStatusOptions; track status.value) {
-                      <hlm-combobox-item [value]="status">{{ status.label }}</hlm-combobox-item>
+                    @for (period of periodOptions(); track period.value) {
+                      <hlm-combobox-item [value]="period">{{ period.label }}</hlm-combobox-item>
                     }
                   </div>
                 </div>
@@ -176,14 +137,78 @@ import { InvoicesStore } from '../state/invoices.store';
           </label>
         </div>
         <div class="flex items-center justify-end gap-2">
-          <button hlmBtn type="button" variant="outline" (click)="applySuggestedPeriod()">
-            Suggest period
-          </button>
           <button hlmBtn type="submit" [disabled]="generationForm.invalid || store.isLoading()">
-            Generate invoice(s)
+            Generate
           </button>
         </div>
       </form>
+
+      <hlm-dialog
+        [state]="previewDialogState()"
+        ariaLabel="Invoice preview dialog"
+        [ariaModal]="true"
+        (closed)="closePreviewDialog()"
+      >
+        <ng-template hlmDialogPortal>
+          <hlm-dialog-content [showCloseButton]="true" class="max-h-[80vh] overflow-y-auto sm:max-w-3xl">
+            <hlm-dialog-header class="text-start">
+              <h2 hlmDialogTitle>Confirm invoice generation</h2>
+              <p hlmDialogDescription>Select status and review line items before creating invoices.</p>
+            </hlm-dialog-header>
+            <div class="grid gap-3 py-2">
+              <label class="grid gap-1 text-sm sm:max-w-xs">
+                <span>Status *</span>
+                <div
+                  hlmCombobox
+                  [value]="selectedPreviewStatusOption()"
+                  [itemToString]="optionToLabel"
+                  [isItemEqualToValue]="isSameValueOption"
+                  (valueChange)="onPreviewStatusValueChange($event)"
+                >
+                  <hlm-combobox-trigger class="w-full justify-between">
+                    <span>{{ selectedPreviewStatusOption()?.label ?? 'Select status' }}</span>
+                  </hlm-combobox-trigger>
+                  <ng-template hlmComboboxPortal>
+                    <div hlmComboboxContent>
+                      <div hlmComboboxList>
+                        @for (status of initialStatusOptions; track status.value) {
+                          <hlm-combobox-item [value]="status">{{ status.label }}</hlm-combobox-item>
+                        }
+                      </div>
+                    </div>
+                  </ng-template>
+                </div>
+              </label>
+
+              @for (preview of store.invoicePreviews(); track preview.groupKey) {
+                <div class="rounded-md border border-border p-3">
+                  <p class="text-sm font-semibold">
+                    Group {{ preview.groupKey }} · {{ preview.lineItems.length }} lines
+                  </p>
+                  <p class="text-xs text-muted-foreground">
+                    Net {{ preview.subtotalNet }} · Tax {{ preview.totalTax }} · Gross
+                    {{ preview.totalGross }}
+                  </p>
+                  <div class="mt-2 space-y-1">
+                    @for (line of preview.lineItems; track line.timeEntryId) {
+                      <p class="text-xs text-muted-foreground">
+                        {{ line.workDate }} · {{ line.description || '-' }} · {{ line.hours }}h x
+                        {{ line.unitRate }} = {{ line.lineNet }} (tax {{ line.taxAmount }})
+                      </p>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+            <hlm-dialog-footer class="justify-end gap-2">
+              <button hlmBtn type="button" variant="outline" hlmDialogClose>Cancel</button>
+              <button hlmBtn type="button" [disabled]="store.isLoading()" (click)="confirmGenerateFromPreview()">
+                Confirm generate
+              </button>
+            </hlm-dialog-footer>
+          </hlm-dialog-content>
+        </ng-template>
+      </hlm-dialog>
 
       @if (store.error()) {
         <p
@@ -300,14 +325,10 @@ export class InvoicesPage implements OnInit {
   private readonly formBuilder = inject(FormBuilder);
   private readonly toast = inject(ToastService);
   protected readonly invoiceStatus = InvoiceStatus;
-  protected readonly billingModelOptions = [
-    { label: 'Week', value: BillingModel.WEEK },
-    { label: 'Month', value: BillingModel.MONTH },
-    { label: 'Year', value: BillingModel.YEAR },
-  ] as const;
   protected readonly initialStatusOptions = [
     { label: 'Concept', value: InvoiceStatus.CONCEPT },
     { label: 'Proforma', value: InvoiceStatus.PROFORMA },
+    { label: 'Open', value: InvoiceStatus.OPEN },
   ] as const;
   protected readonly modeOptions = [
     { label: 'Per project', value: 'per_project' as InvoiceGenerateMode },
@@ -325,17 +346,19 @@ export class InvoicesPage implements OnInit {
       label: `${taxRate.code} - ${taxRate.label} (${this.formatTax(taxRate.percentage)})`,
     })),
   );
-  private readonly periodWasSuggested = signal(false);
+  protected readonly periodOptions = computed(() =>
+    this.store.availablePeriods().map((period) => ({ label: period.label, value: period.key })),
+  );
+  protected readonly previewDialogState = signal<'open' | 'closed'>('closed');
+  private readonly selectedPreviewStatus = signal<
+    InvoiceStatus.CONCEPT | InvoiceStatus.PROFORMA | InvoiceStatus.OPEN
+  >(
+    InvoiceStatus.CONCEPT,
+  );
 
   protected readonly generationForm = this.formBuilder.group({
     clientId: [0, [Validators.required, Validators.min(1)]],
-    billingModel: [BillingModel.MONTH, [Validators.required]],
-    periodStart: ['', [Validators.required]],
-    periodEnd: ['', [Validators.required]],
-    status: [
-      InvoiceStatus.CONCEPT as InvoiceStatus.CONCEPT | InvoiceStatus.PROFORMA,
-      [Validators.required],
-    ],
+    periodKey: ['', [Validators.required]],
     mode: ['per_project' as InvoiceGenerateMode, [Validators.required]],
     taxRateId: [0, [Validators.required, Validators.min(1)]],
   });
@@ -345,7 +368,7 @@ export class InvoicesPage implements OnInit {
     const firstClientId = this.clientOptions()[0]?.id ?? 0;
     const firstTaxId = this.store.taxRates()[0]?.id ?? 0;
     this.generationForm.patchValue({ clientId: firstClientId, taxRateId: firstTaxId });
-    this.applySuggestedPeriod();
+    await this.refreshPeriods();
   }
 
   protected async generate(): Promise<void> {
@@ -354,18 +377,26 @@ export class InvoicesPage implements OnInit {
       return;
     }
     const raw = this.generationForm.getRawValue();
-    const payload: InvoiceGenerateInput = {
+    const selectedPeriod = this.store
+      .availablePeriods()
+      .find((period) => period.key === (raw.periodKey ?? ''));
+    if (!selectedPeriod) {
+      this.toast.show('Please select a period.', 'info');
+      return;
+    }
+
+    await this.store.loadInvoicePreviews({
       clientId: Number(raw.clientId ?? 0),
-      billingModel: raw.billingModel ?? BillingModel.MONTH,
-      periodStart: raw.periodStart ?? '',
-      periodEnd: raw.periodEnd ?? '',
-      status: raw.status ?? InvoiceStatus.CONCEPT,
+      billingModel: selectedPeriod.billingModel,
+      periodStart: selectedPeriod.periodStart,
+      periodEnd: selectedPeriod.periodEnd,
       mode: raw.mode ?? 'per_project',
       taxRateId: Number(raw.taxRateId ?? 0),
-    };
-    await this.store.generateInvoices(payload);
-    if (!this.store.error()) {
-      this.toast.show('Invoice generation completed.', 'success');
+    });
+    if (!this.store.error() && this.store.invoicePreviews().length > 0) {
+      this.previewDialogState.set('open');
+    } else if (!this.store.error()) {
+      this.toast.show('No uninvoiced entries found for this period.', 'info');
     }
   }
 
@@ -409,14 +440,6 @@ export class InvoicesPage implements OnInit {
     }
   }
 
-  protected applySuggestedPeriod(): void {
-    const model = this.generationForm.controls.billingModel.value ?? BillingModel.MONTH;
-    const now = new Date();
-    const { start, end } = getPeriodBounds(model, now);
-    this.generationForm.patchValue({ periodStart: start, periodEnd: end });
-    this.periodWasSuggested.set(true);
-  }
-
   protected formatTax(percentage: number): string {
     return `${(percentage / 100).toFixed(2)}%`;
   }
@@ -439,22 +462,14 @@ export class InvoicesPage implements OnInit {
     return this.clientOptions().find((option) => option.id === value) ?? null;
   }
 
-  protected selectedBillingModelOption(): { label: string; value: BillingModel } | null {
-    const value = this.generationForm.controls.billingModel.value;
-    return this.billingModelOptions.find((option) => option.value === value) ?? null;
-  }
-
   protected selectedTaxRateOption(): { id: number; label: string } | null {
     const value = Number(this.generationForm.controls.taxRateId.value ?? 0);
     return this.taxRateOptions().find((option) => option.id === value) ?? null;
   }
 
-  protected selectedInitialStatusOption(): {
-    label: string;
-    value: InvoiceStatus.CONCEPT | InvoiceStatus.PROFORMA;
-  } | null {
-    const value = this.generationForm.controls.status.value;
-    return this.initialStatusOptions.find((option) => option.value === value) ?? null;
+  protected selectedPeriodOption(): { label: string; value: string } | null {
+    const value = this.generationForm.controls.periodKey.value;
+    return this.periodOptions().find((option) => option.value === value) ?? null;
   }
 
   protected selectedModeOption(): { label: string; value: InvoiceGenerateMode } | null {
@@ -464,24 +479,65 @@ export class InvoicesPage implements OnInit {
 
   protected onClientValueChange(option: { id: number; label: string } | null): void {
     this.generationForm.controls.clientId.setValue(option?.id ?? 0);
-  }
-
-  protected onBillingModelValueChange(option: { label: string; value: BillingModel } | null): void {
-    this.generationForm.controls.billingModel.setValue(option?.value ?? BillingModel.MONTH);
+    void this.refreshPeriods();
   }
 
   protected onTaxRateValueChange(option: { id: number; label: string } | null): void {
     this.generationForm.controls.taxRateId.setValue(option?.id ?? 0);
   }
 
-  protected onInitialStatusValueChange(
-    option: { label: string; value: InvoiceStatus.CONCEPT | InvoiceStatus.PROFORMA } | null,
-  ): void {
-    this.generationForm.controls.status.setValue(option?.value ?? InvoiceStatus.CONCEPT);
+  protected onPeriodValueChange(option: { label: string; value: string } | null): void {
+    this.generationForm.controls.periodKey.setValue(option?.value ?? '');
   }
 
   protected onModeValueChange(option: { label: string; value: InvoiceGenerateMode } | null): void {
     this.generationForm.controls.mode.setValue(option?.value ?? 'per_project');
+  }
+
+  protected selectedPreviewStatusOption():
+    | { label: string; value: InvoiceStatus.CONCEPT | InvoiceStatus.PROFORMA | InvoiceStatus.OPEN }
+    | null {
+    return this.initialStatusOptions.find((option) => option.value === this.selectedPreviewStatus()) ?? null;
+  }
+
+  protected onPreviewStatusValueChange(
+    option:
+      | { label: string; value: InvoiceStatus.CONCEPT | InvoiceStatus.PROFORMA | InvoiceStatus.OPEN }
+      | null,
+  ): void {
+    this.selectedPreviewStatus.set(option?.value ?? InvoiceStatus.CONCEPT);
+  }
+
+  protected closePreviewDialog(): void {
+    this.previewDialogState.set('closed');
+    this.store.clearInvoicePreviews();
+  }
+
+  protected async confirmGenerateFromPreview(): Promise<void> {
+    const raw = this.generationForm.getRawValue();
+    const selectedPeriod = this.store
+      .availablePeriods()
+      .find((period) => period.key === (raw.periodKey ?? ''));
+    if (!selectedPeriod) {
+      this.toast.show('Please select a period.', 'info');
+      return;
+    }
+    const payload: InvoiceGenerateInput = {
+      clientId: Number(raw.clientId ?? 0),
+      billingModel: selectedPeriod.billingModel,
+      periodStart: selectedPeriod.periodStart,
+      periodEnd: selectedPeriod.periodEnd,
+      status: this.selectedPreviewStatus(),
+      mode: raw.mode ?? 'per_project',
+      taxRateId: Number(raw.taxRateId ?? 0),
+    };
+    await this.store.generateInvoices(payload);
+    if (!this.store.error()) {
+      this.toast.show('Invoice generation completed.', 'success');
+      this.previewDialogState.set('closed');
+      this.store.clearInvoicePreviews();
+      await this.refreshPeriods();
+    }
   }
 
   private statusConfirmationMessage(
@@ -507,38 +563,13 @@ export class InvoicesPage implements OnInit {
         return '';
     }
   }
-}
-
-function getPeriodBounds(model: BillingModel, anchor: Date): { start: string; end: string } {
-  if (model === BillingModel.WEEK) {
-    const day = anchor.getDay();
-    const distance = day === 0 ? 6 : day - 1;
-    const startDate = new Date(anchor);
-    startDate.setDate(anchor.getDate() - distance);
-    const endDate = new Date(startDate);
-    endDate.setDate(startDate.getDate() + 7);
-    return { start: isoDate(startDate), end: isoDate(endDate) };
+  private async refreshPeriods(): Promise<void> {
+    const clientId = Number(this.generationForm.controls.clientId.value ?? 0);
+    if (clientId < 1) {
+      this.generationForm.controls.periodKey.setValue('');
+      return;
+    }
+    await this.store.loadAvailablePeriods(clientId);
+    this.generationForm.controls.periodKey.setValue(this.store.availablePeriods()[0]?.key ?? '');
   }
-
-  if (model === BillingModel.YEAR) {
-    const year = anchor.getFullYear();
-    return {
-      start: `${year}-01-01`,
-      end: `${year + 1}-01-01`,
-    };
-  }
-
-  const year = anchor.getFullYear();
-  const month = anchor.getMonth();
-  return {
-    start: isoDate(new Date(year, month, 1)),
-    end: isoDate(new Date(year, month + 1, 1)),
-  };
-}
-
-function isoDate(value: Date): string {
-  const year = value.getFullYear();
-  const month = String(value.getMonth() + 1).padStart(2, '0');
-  const day = String(value.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
 }

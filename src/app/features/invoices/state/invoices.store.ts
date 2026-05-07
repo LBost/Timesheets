@@ -1,7 +1,13 @@
 import { computed, inject } from '@angular/core';
 import { patchState, signalStore, withComputed, withMethods, withState } from '@ngrx/signals';
 import { InvoicesRepository } from '../data/invoices.repository';
-import { InvoiceGenerateInput, InvoiceStatusUpdateInput } from '../models/invoice.model';
+import {
+  InvoiceGenerateInput,
+  InvoicePeriodOption,
+  InvoicePreviewModel,
+  InvoicePreviewRequest,
+  InvoiceStatusUpdateInput,
+} from '../models/invoice.model';
 import { InvoiceLineItemVM, InvoiceVM } from '../models/invoice.vm';
 import { TaxRateModel } from '../models/tax-rate.model';
 
@@ -10,6 +16,8 @@ type InvoicesState = {
   taxRates: TaxRateModel[];
   selectedInvoiceId: number | null;
   selectedLineItems: InvoiceLineItemVM[];
+  availablePeriods: InvoicePeriodOption[];
+  invoicePreviews: InvoicePreviewModel[];
   isLoading: boolean;
   hasLoaded: boolean;
   error: string | null;
@@ -20,6 +28,8 @@ const initialState: InvoicesState = {
   taxRates: [],
   selectedInvoiceId: null,
   selectedLineItems: [],
+  availablePeriods: [],
+  invoicePreviews: [],
   isLoading: false,
   hasLoaded: false,
   error: null,
@@ -58,6 +68,7 @@ export const InvoicesStore = signalStore(
         const created = await repository.generateInvoices(input);
         patchState(store, (state) => ({
           invoices: [...created, ...state.invoices].sort((a, b) => b.id - a.id),
+          invoicePreviews: [],
           isLoading: false,
         }));
       } catch (error) {
@@ -108,6 +119,33 @@ export const InvoicesStore = signalStore(
         });
         return false;
       }
+    },
+    async loadAvailablePeriods(clientId: number): Promise<void> {
+      patchState(store, { isLoading: true, error: null });
+      try {
+        const availablePeriods = await repository.listAvailablePeriods(clientId);
+        patchState(store, { availablePeriods, isLoading: false });
+      } catch (error) {
+        patchState(store, {
+          isLoading: false,
+          error: error instanceof Error ? error.message : 'Failed to load available periods.',
+        });
+      }
+    },
+    async loadInvoicePreviews(input: InvoicePreviewRequest): Promise<void> {
+      patchState(store, { isLoading: true, error: null });
+      try {
+        const invoicePreviews = await repository.previewInvoices(input);
+        patchState(store, { invoicePreviews, isLoading: false });
+      } catch (error) {
+        patchState(store, {
+          isLoading: false,
+          error: error instanceof Error ? error.message : 'Failed to preview invoices.',
+        });
+      }
+    },
+    clearInvoicePreviews(): void {
+      patchState(store, { invoicePreviews: [] });
     },
     async selectInvoice(invoiceId: number | null): Promise<void> {
       patchState(store, { selectedInvoiceId: invoiceId, selectedLineItems: [] });
