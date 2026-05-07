@@ -156,29 +156,55 @@ import { InvoicesStore } from '../state/invoices.store';
               <p hlmDialogDescription>Select status and review line items before creating invoices.</p>
             </hlm-dialog-header>
             <div class="grid gap-3 py-2">
-              <label class="grid gap-1 text-sm sm:max-w-xs">
-                <span>Status *</span>
-                <div
-                  hlmCombobox
-                  [value]="selectedPreviewStatusOption()"
-                  [itemToString]="optionToLabel"
-                  [isItemEqualToValue]="isSameValueOption"
-                  (valueChange)="onPreviewStatusValueChange($event)"
-                >
-                  <hlm-combobox-trigger class="w-full justify-between">
-                    <span>{{ selectedPreviewStatusOption()?.label ?? 'Select status' }}</span>
-                  </hlm-combobox-trigger>
-                  <ng-template hlmComboboxPortal>
-                    <div hlmComboboxContent>
-                      <div hlmComboboxList>
-                        @for (status of initialStatusOptions; track status.value) {
-                          <hlm-combobox-item [value]="status">{{ status.label }}</hlm-combobox-item>
-                        }
+              <div class="grid gap-3 sm:grid-cols-2">
+                <label class="grid gap-1 text-sm">
+                  <span>Status *</span>
+                  <div
+                    hlmCombobox
+                    [value]="selectedPreviewStatusOption()"
+                    [itemToString]="optionToLabel"
+                    [isItemEqualToValue]="isSameValueOption"
+                    (valueChange)="onPreviewStatusValueChange($event)"
+                  >
+                    <hlm-combobox-trigger class="w-full justify-between">
+                      <span>{{ selectedPreviewStatusOption()?.label ?? 'Select status' }}</span>
+                    </hlm-combobox-trigger>
+                    <ng-template hlmComboboxPortal>
+                      <div hlmComboboxContent>
+                        <div hlmComboboxList>
+                          @for (status of initialStatusOptions; track status.value) {
+                            <hlm-combobox-item [value]="status">{{ status.label }}</hlm-combobox-item>
+                          }
+                        </div>
                       </div>
-                    </div>
-                  </ng-template>
-                </div>
-              </label>
+                    </ng-template>
+                  </div>
+                </label>
+
+                <label class="grid gap-1 text-sm">
+                  <span>Line view</span>
+                  <div
+                    hlmCombobox
+                    [value]="selectedPreviewLineViewOption()"
+                    [itemToString]="optionToLabel"
+                    [isItemEqualToValue]="isSameValueOption"
+                    (valueChange)="onPreviewLineViewValueChange($event)"
+                  >
+                    <hlm-combobox-trigger class="w-full justify-between">
+                      <span>{{ selectedPreviewLineViewOption()?.label ?? 'Select view' }}</span>
+                    </hlm-combobox-trigger>
+                    <ng-template hlmComboboxPortal>
+                      <div hlmComboboxContent>
+                        <div hlmComboboxList>
+                          @for (view of previewLineViewOptions; track view.value) {
+                            <hlm-combobox-item [value]="view">{{ view.label }}</hlm-combobox-item>
+                          }
+                        </div>
+                      </div>
+                    </ng-template>
+                  </div>
+                </label>
+              </div>
 
               @for (preview of store.invoicePreviews(); track preview.groupKey) {
                 <div class="rounded-md border border-border p-3">
@@ -189,14 +215,26 @@ import { InvoicesStore } from '../state/invoices.store';
                     Net {{ preview.subtotalNet }} · Tax {{ preview.totalTax }} · Gross
                     {{ preview.totalGross }}
                   </p>
-                  <div class="mt-2 space-y-1">
-                    @for (line of preview.lineItems; track line.timeEntryId) {
-                      <p class="text-xs text-muted-foreground">
-                        {{ line.workDate }} · {{ line.description || '-' }} · {{ line.hours }}h x
-                        {{ line.unitRate }} = {{ line.lineNet }} (tax {{ line.taxAmount }})
-                      </p>
-                    }
-                  </div>
+                  @if (selectedPreviewLineView() === 'detailed') {
+                    <div class="mt-2 space-y-1">
+                      @for (line of preview.lineItems; track line.timeEntryId) {
+                        <p class="text-xs text-muted-foreground">
+                          {{ line.workDate }} · {{ line.description || '-' }} · {{ line.hours }}h x
+                          {{ line.unitRate }} = {{ line.lineNet }} (tax {{ line.taxAmount }})
+                        </p>
+                      }
+                    </div>
+                  } @else {
+                    <div class="mt-2 space-y-1">
+                      @for (summaryLine of summarizePreviewByProject(preview.lineItems); track summaryLine.projectId) {
+                        <p class="text-xs text-muted-foreground">
+                          Project #{{ summaryLine.projectId }} · {{ summaryLine.entryCount }} entries ·
+                          {{ summaryLine.hours }}h · net {{ summaryLine.lineNet }} · tax
+                          {{ summaryLine.taxAmount }} · gross {{ summaryLine.lineGross }}
+                        </p>
+                      }
+                    </div>
+                  }
                 </div>
               }
             </div>
@@ -334,6 +372,10 @@ export class InvoicesPage implements OnInit {
     { label: 'Per project', value: 'per_project' as InvoiceGenerateMode },
     { label: 'Combined client invoice', value: 'combined' as InvoiceGenerateMode },
   ] as const;
+  protected readonly previewLineViewOptions = [
+    { label: 'Detailed', value: 'detailed' as const },
+    { label: 'Summary', value: 'summary' as const },
+  ] as const;
   protected readonly clientOptions = computed(() =>
     activeLookup(this.clientsStore.clients()).map((client) => ({
       id: client.id,
@@ -355,6 +397,7 @@ export class InvoicesPage implements OnInit {
   >(
     InvoiceStatus.CONCEPT,
   );
+  protected readonly selectedPreviewLineView = signal<'detailed' | 'summary'>('detailed');
 
   protected readonly generationForm = this.formBuilder.group({
     clientId: [0, [Validators.required, Validators.min(1)]],
@@ -508,9 +551,25 @@ export class InvoicesPage implements OnInit {
     this.selectedPreviewStatus.set(option?.value ?? InvoiceStatus.CONCEPT);
   }
 
+  protected selectedPreviewLineViewOption():
+    | { label: string; value: 'detailed' | 'summary' }
+    | null {
+    return (
+      this.previewLineViewOptions.find((option) => option.value === this.selectedPreviewLineView()) ??
+      null
+    );
+  }
+
+  protected onPreviewLineViewValueChange(
+    option: { label: string; value: 'detailed' | 'summary' } | null,
+  ): void {
+    this.selectedPreviewLineView.set(option?.value ?? 'detailed');
+  }
+
   protected closePreviewDialog(): void {
     this.previewDialogState.set('closed');
     this.store.clearInvoicePreviews();
+    this.selectedPreviewLineView.set('detailed');
   }
 
   protected async confirmGenerateFromPreview(): Promise<void> {
@@ -571,5 +630,45 @@ export class InvoicesPage implements OnInit {
     }
     await this.store.loadAvailablePeriods(clientId);
     this.generationForm.controls.periodKey.setValue(this.store.availablePeriods()[0]?.key ?? '');
+  }
+
+  protected summarizePreviewByProject(
+    lines: ReadonlyArray<{
+      projectId: number;
+      hours: number;
+      lineNet: number;
+      taxAmount: number;
+      lineGross: number;
+    }>,
+  ): Array<{
+    projectId: number;
+    entryCount: number;
+    hours: number;
+    lineNet: number;
+    taxAmount: number;
+    lineGross: number;
+  }> {
+    const grouped = new Map<
+      number,
+      { entryCount: number; hours: number; lineNet: number; taxAmount: number; lineGross: number }
+    >();
+
+    for (const line of lines) {
+      const next = grouped.get(line.projectId) ?? {
+        entryCount: 0,
+        hours: 0,
+        lineNet: 0,
+        taxAmount: 0,
+        lineGross: 0,
+      };
+      next.entryCount += 1;
+      next.hours += line.hours;
+      next.lineNet += line.lineNet;
+      next.taxAmount += line.taxAmount;
+      next.lineGross += line.lineGross;
+      grouped.set(line.projectId, next);
+    }
+
+    return [...grouped.entries()].map(([projectId, values]) => ({ projectId, ...values }));
   }
 }
