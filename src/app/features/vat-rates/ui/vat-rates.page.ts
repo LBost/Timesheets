@@ -61,15 +61,34 @@ import { VatRatesStore } from '../state/vat-rates.store';
             <form class="grid gap-4 pt-4" [formGroup]="vatRateForm" (ngSubmit)="submitVatRate()">
               <label class="grid gap-1 text-sm">
                 <span>Code *</span>
-                <input hlmInput type="text" formControlName="code" placeholder="VAT19" maxlength="40" />
+                <input
+                  hlmInput
+                  type="text"
+                  formControlName="code"
+                  placeholder="VAT19"
+                  maxlength="40"
+                />
               </label>
               <label class="grid gap-1 text-sm">
                 <span>Label *</span>
-                <input hlmInput type="text" formControlName="label" placeholder="VAT 19%" maxlength="120" />
+                <input
+                  hlmInput
+                  type="text"
+                  formControlName="label"
+                  placeholder="VAT 19%"
+                  maxlength="120"
+                />
               </label>
               <label class="grid gap-1 text-sm">
                 <span>Percentage (%) *</span>
-                <input hlmInput type="number" formControlName="percentage" min="0" max="100" step="0.01" />
+                <input
+                  hlmInput
+                  type="number"
+                  formControlName="percentage"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                />
               </label>
               <label class="grid gap-1 text-sm">
                 <span>Status *</span>
@@ -106,28 +125,32 @@ import { VatRatesStore } from '../state/vat-rates.store';
           </hlm-sheet-content>
         </ng-template>
       </hlm-sheet>
-      <div hlmSeparator></div>
+      <!-- <div hlmSeparator></div> -->
 
-      @if (store.error()) {
-        <p class="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
-          {{ store.error() }}
-        </p>
-      } @else if (showLoadingSpinner()) {
-        <p class="text-sm text-muted-foreground">Loading VAT rates…</p>
-      }
+      <div class="rounded-xl border border-border bg-card p-6 shadow-sm">
+        @if (store.error()) {
+          <p
+            class="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
+          >
+            {{ store.error() }}
+          </p>
+        } @else if (showLoadingSpinner()) {
+          <p class="text-sm text-muted-foreground">Loading VAT rates…</p>
+        }
 
-      <app-entity-data-table
-        [data]="store.vatRates()"
-        [columns]="columns"
-        [globalFilterRowText]="globalFilterText"
-        [columnFiltersConfig]="columnFilters()"
-        filterPlaceholder="Filter VAT rates…"
-        emptyMessage="No VAT rates yet."
-        (addRequested)="openAddMode()"
-        (editRequested)="editVatRate($event)"
-        (deleteRequested)="deleteVatRate($event)"
-        (archiveRequested)="archiveVatRate($event)"
-      />
+        <app-entity-data-table
+          [data]="store.vatRates()"
+          [columns]="columns"
+          [globalFilterRowText]="globalFilterText"
+          [columnFiltersConfig]="columnFilters()"
+          filterPlaceholder="Filter VAT rates…"
+          emptyMessage="No VAT rates yet."
+          (addRequested)="openAddMode()"
+          (editRequested)="editVatRate($event)"
+          (deleteRequested)="deleteVatRate($event)"
+          (archiveRequested)="archiveVatRate($event)"
+        />
+      </div>
     </section>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
