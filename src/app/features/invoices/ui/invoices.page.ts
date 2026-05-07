@@ -18,6 +18,7 @@ import { ToastService } from '../../../core/feedback/toast.service';
 import { activeLookup } from '../../../shared/components/combobox-selection/combobox-selection.util';
 import { FeatureHeaderActionsComponent } from '../../../shared/components/feature-header-actions/feature-header-actions.component';
 import { ClientsStore } from '../../clients/state/clients.store';
+import { formatInvoicePeriodLabel } from '../data/invoice-period.util';
 import {
   InvoiceGenerateMode,
   InvoiceGenerateInput,
@@ -108,7 +109,7 @@ import { InvoicesTableComponent } from './components/invoices-table.component';
                   </div>
                   <div>
                     <p class="text-muted-foreground">Period</p>
-                    <p class="font-medium">{{ invoice.periodStart }} - {{ invoice.periodEnd }}</p>
+                    <p class="font-medium">{{ formatInvoicePeriod(invoice.periodStart, invoice.periodEnd) }}</p>
                   </div>
                   <label class="grid gap-1">
                     <span>Status *</span>
@@ -820,6 +821,10 @@ export class InvoicesPage implements OnInit {
 
   protected invoiceLineProjectLabel(line: { projectCode: string; orderCode: string | null }): string {
     return line.orderCode ?? line.projectCode;
+  }
+
+  protected formatInvoicePeriod(periodStart: string, periodEnd: string): string {
+    return formatInvoicePeriodLabel(periodStart, periodEnd);
   }
 
   protected previewLineProjectLabel(line: {

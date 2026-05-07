@@ -2,6 +2,7 @@ import { flexRenderComponent } from '@tanstack/angular-table';
 import type { ColumnDef } from '@tanstack/table-core';
 import { DataTableSortHeaderComponent } from '../../../../shared/components/entity-data-table/data-table-sort-header.component';
 import type { EntityTableRow } from '../../../../shared/components/entity-data-table/entity-table-row.model';
+import { formatInvoicePeriodLabel } from '../../data/invoice-period.util';
 import { InvoiceVM } from '../../models/invoice.vm';
 
 export function createInvoiceColumns(): ColumnDef<InvoiceVM>[] {
@@ -25,11 +26,15 @@ export function createInvoiceColumns(): ColumnDef<InvoiceVM>[] {
     },
     {
       id: 'period',
-      accessorFn: (row) => `${row.periodStart} - ${row.periodEnd}`,
+      accessorFn: (row) => formatInvoicePeriodLabel(row.periodStart, row.periodEnd),
       meta: { headerLabel: 'Period', columnMenuLabel: 'Period' },
       header: () => flexRenderComponent(DataTableSortHeaderComponent),
       cell: (info) => info.getValue<string>(),
       enableSorting: true,
+      sortingFn: (rowA, rowB) =>
+        (rowA.original as InvoiceVM).periodStart.localeCompare(
+          (rowB.original as InvoiceVM).periodStart,
+        ),
     },
     {
       id: 'status',
@@ -67,6 +72,7 @@ export function invoiceGlobalFilterText(row: EntityTableRow): string {
     invoice.status,
     invoice.periodStart,
     invoice.periodEnd,
+    formatInvoicePeriodLabel(invoice.periodStart, invoice.periodEnd),
     String(invoice.totalGross),
     String(invoice.lineItemCount),
   ]
