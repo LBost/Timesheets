@@ -45,6 +45,11 @@ export const routes: Routes = [
           import('./features/invoices/ui/invoices.page').then((module) => module.InvoicesPage),
       },
       {
+        path: 'vat-rates',
+        loadComponent: () =>
+          import('./features/vat-rates/ui/vat-rates.page').then((module) => module.VatRatesPage),
+      },
+      {
         path: 'settings',
         loadComponent: () =>
           import('./features/settings/ui/settings.page').then((module) => module.SettingsPage),

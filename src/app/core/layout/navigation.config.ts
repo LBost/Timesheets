@@ -65,6 +65,12 @@ export const APP_NAVIGATION: NavigationSection[] = [
         route: '/invoices',
         icon: 'lucideReceipt',
         enabled: true
+      },
+      {
+        label: 'VAT Rates',
+        route: '/vat-rates',
+        icon: 'lucideReceipt',
+        enabled: true
       }
     ]
   }
