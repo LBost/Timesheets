@@ -1,10 +1,22 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  OnInit,
+  ViewChild,
+  computed,
+  inject,
+} from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmInputImports } from '@spartan-ng/helm/input';
 import { HlmSeparatorImports } from '@spartan-ng/helm/separator';
 import { ToastService } from '../../../core/feedback/toast.service';
 import { SettingsStore } from '../state/settings.store';
+import {
+  assertValidSettingsBackupPayload,
+  SettingsBackupPayload,
+} from '../models/settings-backup.model';
 
 @Component({
   selector: 'app-settings-page',
@@ -96,6 +108,45 @@ import { SettingsStore } from '../state/settings.store';
         </form>
       </div>
 
+      <div class="rounded-xl border border-border bg-card p-6 shadow-sm">
+        <div class="mb-4 space-y-1">
+          <h2 class="text-lg font-semibold">Backup & Restore</h2>
+          <p class="text-sm text-muted-foreground">
+            Export all app data for your account to a local file and restore it later if needed.
+          </p>
+        </div>
+
+        <div class="space-y-4">
+          <div class="rounded-lg border border-border/60 bg-muted/20 p-3">
+            <p class="text-sm text-muted-foreground">
+              Restore replaces your current data with the backup file contents.
+            </p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2">
+            <button hlmBtn type="button" variant="outline" [disabled]="isBusy()" (click)="createBackupFile()">
+              Create backup
+            </button>
+            <button
+              hlmBtn
+              type="button"
+              variant="destructive"
+              [disabled]="isBusy()"
+              (click)="openRestoreFilePicker()"
+            >
+              Restore backup
+            </button>
+            <input
+              #restoreInput
+              type="file"
+              accept="application/json,.json"
+              class="hidden"
+              (change)="onRestoreFileSelected($event)"
+            />
+          </div>
+        </div>
+      </div>
+
       <div class="rounded-lg border border-border/60 bg-muted/20 p-4">
         <h3 class="text-sm font-semibold">Planned behavior</h3>
         <p class="mt-1 text-sm text-muted-foreground">
@@ -111,6 +162,7 @@ export class SettingsPage implements OnInit {
   protected readonly store = inject(SettingsStore);
   private readonly formBuilder = inject(FormBuilder);
   private readonly toast = inject(ToastService);
+  @ViewChild('restoreInput') private restoreInput?: ElementRef<HTMLInputElement>;
 
   protected readonly settingsForm = this.formBuilder.group({
     nextInvoiceNumber: [
@@ -120,7 +172,13 @@ export class SettingsPage implements OnInit {
     preferredTimeEntriesView: ['month' as 'month' | 'week', [Validators.required]],
   });
 
-  protected readonly isBusy = computed(() => this.store.isLoading() || this.store.isSaving());
+  protected readonly isBusy = computed(
+    () =>
+      this.store.isLoading() ||
+      this.store.isSaving() ||
+      this.store.isBackingUp() ||
+      this.store.isRestoring(),
+  );
 
   protected get nextInvoiceNumberControl() {
     return this.settingsForm.controls.nextInvoiceNumber;
@@ -167,5 +225,100 @@ export class SettingsPage implements OnInit {
     control.setValue(view);
     control.markAsDirty();
     this.settingsForm.markAsDirty();
+  }
+
+  protected async createBackupFile(): Promise<void> {
+    const payload = await this.store.createBackup();
+    if (!payload) {
+      return;
+    }
+
+    const fileName = `timesheets-backup-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+    this.downloadBackup(payload, fileName);
+    this.toast.show('Backup downloaded.', 'success');
+  }
+
+  protected openRestoreFilePicker(): void {
+    this.restoreInput?.nativeElement.click();
+  }
+
+  protected async onRestoreFileSelected(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    try {
+      const text = await file.text();
+      const payload = JSON.parse(text) as unknown;
+      assertValidSettingsBackupPayload(payload);
+      if (!this.confirmRestore(payload)) {
+        return;
+      }
+      const restored = await this.store.restoreBackup(payload);
+      if (!restored) {
+        return;
+      }
+      this.resetToStored();
+      this.toast.show('Backup restored.', 'success');
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('backup')) {
+        this.toast.show(error.message, 'info');
+      } else {
+        this.toast.show('Backup file could not be read.', 'info');
+      }
+    } finally {
+      input.value = '';
+    }
+  }
+
+  private confirmRestore(payload: SettingsBackupPayload): boolean {
+    const firstConfirm = window.confirm(this.buildRestoreSummary(payload));
+    if (!firstConfirm) {
+      return false;
+    }
+
+    const confirmation = window.prompt('Type RESTORE to confirm this destructive action.');
+    if (confirmation !== 'RESTORE') {
+      this.toast.show('Restore cancelled.', 'info');
+      return false;
+    }
+    return true;
+  }
+
+  private buildRestoreSummary(payload: SettingsBackupPayload): string {
+    const exportedAtUtc = this.formatUtcTimestamp(payload.meta.exportedAt);
+    const summaryLines = [
+      'Restore will permanently replace your current data for this account.',
+      '',
+      'Backup preview:',
+      `- Exported at (UTC): ${exportedAtUtc}`,
+      `- Clients: ${payload.data.clients.length}`,
+      `- Projects: ${payload.data.projects.length}`,
+      `- Orders: ${payload.data.orders.length}`,
+      `- Time entries: ${payload.data.time_entries.length}`,
+      `- Tax rates: ${payload.data.tax_rates.length}`,
+      `- Invoices: ${payload.data.invoices.length}`,
+      `- Invoice line items: ${payload.data.invoice_line_items.length}`,
+      '',
+      'Continue?',
+    ];
+    return summaryLines.join('\n');
+  }
+
+  private formatUtcTimestamp(value: string): string {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? value : date.toISOString();
+  }
+
+  private downloadBackup(payload: SettingsBackupPayload, fileName: string): void {
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = fileName;
+    anchor.click();
+    URL.revokeObjectURL(url);
   }
 }

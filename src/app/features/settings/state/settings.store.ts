@@ -1,12 +1,15 @@
 import { inject } from '@angular/core';
 import { patchState, signalStore, withMethods, withState } from '@ngrx/signals';
 import { SettingsRepository } from '../data/settings.repository';
+import { SettingsBackupPayload } from '../models/settings-backup.model';
 
 type SettingsState = {
   nextInvoiceNumber: string;
   preferredTimeEntriesView: 'month' | 'week';
   isLoading: boolean;
   isSaving: boolean;
+  isBackingUp: boolean;
+  isRestoring: boolean;
   hasLoaded: boolean;
   lastLoadedAt: number | null;
   error: string | null;
@@ -17,6 +20,8 @@ const initialState: SettingsState = {
   preferredTimeEntriesView: 'month',
   isLoading: false,
   isSaving: false,
+  isBackingUp: false,
+  isRestoring: false,
   hasLoaded: false,
   lastLoadedAt: null,
   error: null,
@@ -69,6 +74,37 @@ export const SettingsStore = signalStore(
       }
     };
 
+    const createBackup = async (): Promise<SettingsBackupPayload | null> => {
+      patchState(store, { isBackingUp: true, error: null });
+      try {
+        const backup = await repository.exportUserBackup();
+        patchState(store, { isBackingUp: false });
+        return backup;
+      } catch (error) {
+        patchState(store, {
+          isBackingUp: false,
+          error: error instanceof Error ? error.message : 'Failed to create backup.',
+        });
+        return null;
+      }
+    };
+
+    const restoreBackup = async (payload: unknown): Promise<boolean> => {
+      patchState(store, { isRestoring: true, error: null });
+      try {
+        await repository.restoreUserBackup(payload);
+        await loadSettings();
+        patchState(store, { isRestoring: false });
+        return true;
+      } catch (error) {
+        patchState(store, {
+          isRestoring: false,
+          error: error instanceof Error ? error.message : 'Failed to restore backup.',
+        });
+        return false;
+      }
+    };
+
     return {
       async loadSettings(): Promise<void> {
         await loadSettings();
@@ -87,6 +123,12 @@ export const SettingsStore = signalStore(
       },
       async savePreferredTimeEntriesView(preferredTimeEntriesView: 'month' | 'week'): Promise<boolean> {
         return saveSettings(store.nextInvoiceNumber(), preferredTimeEntriesView);
+      },
+      async createBackup(): Promise<SettingsBackupPayload | null> {
+        return createBackup();
+      },
+      async restoreBackup(payload: unknown): Promise<boolean> {
+        return restoreBackup(payload);
       },
     };
   }),
