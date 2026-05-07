@@ -90,14 +90,24 @@ import { InvoicesTableComponent } from './components/invoices-table.component';
       </hlm-sheet>
 
       <hlm-sheet>
-        <button #editSheetOpenButton class="hidden" hlmSheetTrigger side="right" type="button"></button>
+        <button
+          #editSheetOpenButton
+          class="hidden"
+          hlmSheetTrigger
+          side="right"
+          type="button"
+        ></button>
         <ng-template hlmSheetPortal>
           <hlm-sheet-content class="w-full border-border/40 sm:max-w-5xl">
             <div hlmSheetHeader>
               <h2 hlmSheetTitle>Edit invoice</h2>
             </div>
             @if (store.selectedInvoice(); as invoice) {
-              <form class="flex h-full flex-col gap-5 py-4" [formGroup]="editForm" (ngSubmit)="saveInvoiceEdit()">
+              <form
+                class="flex h-full flex-col gap-5 py-4"
+                [formGroup]="editForm"
+                (ngSubmit)="saveInvoiceEdit()"
+              >
                 <div class="grid gap-4 text-sm sm:grid-cols-4">
                   <div>
                     <p class="text-muted-foreground">Invoice</p>
@@ -109,7 +119,9 @@ import { InvoicesTableComponent } from './components/invoices-table.component';
                   </div>
                   <div>
                     <p class="text-muted-foreground">Period</p>
-                    <p class="font-medium">{{ formatInvoicePeriod(invoice.periodStart, invoice.periodEnd) }}</p>
+                    <p class="font-medium">
+                      {{ formatInvoicePeriod(invoice.periodStart, invoice.periodEnd) }}
+                    </p>
                   </div>
                   <label class="grid gap-1">
                     <span>Status *</span>
@@ -127,7 +139,9 @@ import { InvoicesTableComponent } from './components/invoices-table.component';
                         <div hlmComboboxContent>
                           <div hlmComboboxList>
                             @for (status of statusOptions; track status.value) {
-                              <hlm-combobox-item [value]="status">{{ status.label }}</hlm-combobox-item>
+                              <hlm-combobox-item [value]="status">{{
+                                status.label
+                              }}</hlm-combobox-item>
                             }
                           </div>
                         </div>
@@ -138,7 +152,9 @@ import { InvoicesTableComponent } from './components/invoices-table.component';
 
                 <div class="min-h-0 flex-1 rounded-md border border-border p-3">
                   <p class="text-sm font-semibold">Line items</p>
-                  <p class="text-xs text-muted-foreground">{{ invoice.lineItemCount }} linked line item(s)</p>
+                  <p class="text-xs text-muted-foreground">
+                    {{ invoice.lineItemCount }} linked line item(s)
+                  </p>
                   <div class="mt-2 overflow-auto rounded-md border border-border">
                     <table class="w-full min-w-[980px] table-fixed text-sm">
                       <colgroup>
@@ -149,7 +165,9 @@ import { InvoicesTableComponent } from './components/invoices-table.component';
                         <col class="w-[10%]" />
                         <col class="w-[10%]" />
                       </colgroup>
-                      <thead class="bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                      <thead
+                        class="bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground"
+                      >
                         <tr>
                           <th class="px-3 py-2 font-medium">Period</th>
                           <th class="px-3 py-2 font-medium">Project / Order</th>
@@ -162,18 +180,28 @@ import { InvoicesTableComponent } from './components/invoices-table.component';
                       <tbody>
                         @for (line of store.selectedLineItems(); track line.id) {
                           <tr class="border-t border-border/60">
-                            <td class="px-3 py-2 align-top whitespace-nowrap">{{ line.workDate }}</td>
+                            <td class="px-3 py-2 align-top whitespace-nowrap">
+                              {{ line.workDate }}
+                            </td>
                             <td class="px-3 py-2 align-top">{{ invoiceLineProjectLabel(line) }}</td>
-                            <td class="px-3 py-2 text-right align-top tabular-nums whitespace-nowrap">
+                            <td
+                              class="px-3 py-2 text-right align-top tabular-nums whitespace-nowrap"
+                            >
                               {{ formatHours(line.hours) }}
                             </td>
-                            <td class="px-3 py-2 text-right align-top tabular-nums whitespace-nowrap">
+                            <td
+                              class="px-3 py-2 text-right align-top tabular-nums whitespace-nowrap"
+                            >
                               {{ formatMoney(line.lineNet) }}
                             </td>
-                            <td class="px-3 py-2 text-right align-top tabular-nums whitespace-nowrap">
+                            <td
+                              class="px-3 py-2 text-right align-top tabular-nums whitespace-nowrap"
+                            >
                               {{ formatMoney(line.taxAmount) }}
                             </td>
-                            <td class="px-3 py-2 text-right align-top tabular-nums whitespace-nowrap">
+                            <td
+                              class="px-3 py-2 text-right align-top tabular-nums whitespace-nowrap"
+                            >
                               {{ formatMoney(line.lineGross) }}
                             </td>
                           </tr>
@@ -187,19 +215,30 @@ import { InvoicesTableComponent } from './components/invoices-table.component';
                       </tbody>
                       <tfoot class="border-t border-border bg-muted/20">
                         <tr>
-                          <td class="px-3 py-2 text-xs font-semibold uppercase text-muted-foreground" colspan="2">
+                          <td
+                            class="px-3 py-2 text-xs font-semibold uppercase text-muted-foreground"
+                            colspan="2"
+                          >
                             Totals
                           </td>
-                          <td class="px-3 py-2 text-right font-semibold tabular-nums whitespace-nowrap">
+                          <td
+                            class="px-3 py-2 text-right font-semibold tabular-nums whitespace-nowrap"
+                          >
                             {{ formatHours(selectedLineTotals().hours) }}
                           </td>
-                          <td class="px-3 py-2 text-right font-semibold tabular-nums whitespace-nowrap">
+                          <td
+                            class="px-3 py-2 text-right font-semibold tabular-nums whitespace-nowrap"
+                          >
                             {{ formatMoney(selectedLineTotals().net) }}
                           </td>
-                          <td class="px-3 py-2 text-right font-semibold tabular-nums whitespace-nowrap">
+                          <td
+                            class="px-3 py-2 text-right font-semibold tabular-nums whitespace-nowrap"
+                          >
                             {{ formatMoney(selectedLineTotals().tax) }}
                           </td>
-                          <td class="px-3 py-2 text-right font-semibold tabular-nums whitespace-nowrap">
+                          <td
+                            class="px-3 py-2 text-right font-semibold tabular-nums whitespace-nowrap"
+                          >
                             {{ formatMoney(selectedLineTotals().gross) }}
                           </td>
                         </tr>
@@ -209,9 +248,15 @@ import { InvoicesTableComponent } from './components/invoices-table.component';
                 </div>
 
                 <div class="mt-auto flex flex-wrap justify-start gap-2 border-t border-border pt-4">
-                  <button hlmBtn type="submit" [disabled]="store.isLoading() || editForm.invalid">Save</button>
-                  <button hlmBtn type="button" variant="secondary" (click)="resetEditForm()">Reset</button>
-                  <button hlmBtn type="button" variant="outline" (click)="cancelEditSheet()">Cancel</button>
+                  <button hlmBtn type="submit" [disabled]="store.isLoading() || editForm.invalid">
+                    Save
+                  </button>
+                  <button hlmBtn type="button" variant="secondary" (click)="resetEditForm()">
+                    Reset
+                  </button>
+                  <button hlmBtn type="button" variant="outline" (click)="cancelEditSheet()">
+                    Cancel
+                  </button>
                 </div>
               </form>
             } @else {
@@ -222,181 +267,231 @@ import { InvoicesTableComponent } from './components/invoices-table.component';
         </ng-template>
       </hlm-sheet>
 
-      <div hlmSeparator></div>
+      <!-- <div hlmSeparator></div> -->
+      <div class="rounded-xl border border-border bg-card p-6 shadow-sm">
+        <app-invoices-state-messages [storeError]="store.error()" />
 
-      <app-invoices-state-messages [storeError]="store.error()" />
+        <app-invoices-table
+          [invoices]="store.invoices()"
+          (addRequested)="openGenerateSheet()"
+          (editRequested)="openEditInvoice($event)"
+          (deleteRequested)="deleteInvoice($event)"
+        />
 
-      <app-invoices-table
-        [invoices]="store.invoices()"
-        (addRequested)="openGenerateSheet()"
-        (editRequested)="openEditInvoice($event)"
-        (deleteRequested)="deleteInvoice($event)"
-      />
-
-      <hlm-dialog
-        [state]="previewDialogState()"
-        ariaLabel="Invoice preview dialog"
-        [ariaModal]="true"
-        (closed)="closePreviewDialog()"
-      >
-        <ng-template hlmDialogPortal>
-          <hlm-dialog-content
-            [showCloseButton]="true"
-            class="left-0! top-0! mx-0! h-screen! w-screen! max-h-screen! max-w-none! translate-x-0! translate-y-0! overflow-hidden! rounded-none! border-0! p-0! shadow-none!"
-          >
-            <div class="flex h-full flex-col">
-              <hlm-dialog-header class="border-b border-border px-6 py-4 text-start">
-                <h2 hlmDialogTitle>Confirm invoice generation</h2>
-                <p hlmDialogDescription>Select status and review line items before creating invoices.</p>
-              </hlm-dialog-header>
-              <div class="flex flex-1 flex-col gap-3 overflow-auto px-6 py-4">
-              <div class="grid gap-3 sm:grid-cols-2">
-                <label class="grid gap-1 text-sm">
-                  <span>Status *</span>
-                  <div
-                    hlmCombobox
-                    [value]="selectedPreviewStatusOption()"
-                    [itemToString]="optionToLabel"
-                    [isItemEqualToValue]="isSameValueOption"
-                    (valueChange)="onPreviewStatusValueChange($event)"
-                  >
-                    <hlm-combobox-trigger class="w-full justify-between">
-                      <span>{{ selectedPreviewStatusOption()?.label ?? 'Select status' }}</span>
-                    </hlm-combobox-trigger>
-                    <ng-template hlmComboboxPortal>
-                      <div hlmComboboxContent>
-                        <div hlmComboboxList>
-                          @for (status of initialStatusOptions; track status.value) {
-                            <hlm-combobox-item [value]="status">{{ status.label }}</hlm-combobox-item>
-                          }
-                        </div>
-                      </div>
-                    </ng-template>
-                  </div>
-                </label>
-
-                <label class="grid gap-1 text-sm">
-                  <span>Line view</span>
-                  <div
-                    hlmCombobox
-                    [value]="selectedPreviewLineViewOption()"
-                    [itemToString]="optionToLabel"
-                    [isItemEqualToValue]="isSameValueOption"
-                    (valueChange)="onPreviewLineViewValueChange($event)"
-                  >
-                    <hlm-combobox-trigger class="w-full justify-between">
-                      <span>{{ selectedPreviewLineViewOption()?.label ?? 'Select view' }}</span>
-                    </hlm-combobox-trigger>
-                    <ng-template hlmComboboxPortal>
-                      <div hlmComboboxContent>
-                        <div hlmComboboxList>
-                          @for (view of previewLineViewOptions; track view.value) {
-                            <hlm-combobox-item [value]="view">{{ view.label }}</hlm-combobox-item>
-                          }
-                        </div>
-                      </div>
-                    </ng-template>
-                  </div>
-                </label>
-              </div>
-
-              @for (preview of store.invoicePreviews(); track preview.groupKey) {
-                <div class="rounded-md border border-border p-3">
-                  <p class="text-sm font-semibold">
-                    Group {{ preview.groupKey }} · {{ preview.lineItems.length }} lines
+        <hlm-dialog
+          [state]="previewDialogState()"
+          ariaLabel="Invoice preview dialog"
+          [ariaModal]="true"
+          (closed)="closePreviewDialog()"
+        >
+          <ng-template hlmDialogPortal>
+            <hlm-dialog-content
+              [showCloseButton]="true"
+              class="left-0! top-0! mx-0! h-screen! w-screen! max-h-screen! max-w-none! translate-x-0! translate-y-0! overflow-hidden! rounded-none! border-0! p-0! shadow-none!"
+            >
+              <div class="flex h-full flex-col">
+                <hlm-dialog-header class="border-b border-border px-6 py-4 text-start">
+                  <h2 hlmDialogTitle>Confirm invoice generation</h2>
+                  <p hlmDialogDescription>
+                    Select status and review line items before creating invoices.
                   </p>
-                  <div class="mt-2 overflow-x-auto rounded-md border border-border">
-                    <table class="w-full min-w-[980px] table-fixed text-sm">
-                      <colgroup>
-                        <col class="w-[16%]" />
-                        <col class="w-[44%]" />
-                        <col class="w-[10%]" />
-                        <col class="w-[10%]" />
-                        <col class="w-[10%]" />
-                        <col class="w-[10%]" />
-                      </colgroup>
-                      <thead class="bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
-                        <tr>
-                          <th class="px-3 py-2 font-medium">Period</th>
-                          <th class="px-3 py-2 font-medium">Project / Order</th>
-                          <th class="px-3 py-2 text-right font-medium">Hours</th>
-                          <th class="px-3 py-2 text-right font-medium">Net</th>
-                          <th class="px-3 py-2 text-right font-medium">VAT</th>
-                          <th class="px-3 py-2 text-right font-medium">Gross</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        @if (selectedPreviewLineView() === 'detailed') {
-                          @for (line of preview.lineItems; track line.timeEntryId) {
-                            <tr class="border-t border-border/60">
-                              <td class="px-3 py-2 align-top whitespace-nowrap">{{ line.workDate }}</td>
-                              <td class="px-3 py-2 align-top">{{ previewLineProjectLabel(line) }}</td>
-                              <td class="px-3 py-2 text-right align-top tabular-nums whitespace-nowrap">
-                                {{ formatHours(line.hours) }}
-                              </td>
-                              <td class="px-3 py-2 text-right align-top tabular-nums whitespace-nowrap">
-                                {{ formatMoney(line.lineNet) }}
-                              </td>
-                              <td class="px-3 py-2 text-right align-top tabular-nums whitespace-nowrap">
-                                {{ formatMoney(line.taxAmount) }}
-                              </td>
-                              <td class="px-3 py-2 text-right align-top tabular-nums whitespace-nowrap">
-                                {{ formatMoney(line.lineGross) }}
-                              </td>
-                            </tr>
-                          }
-                        } @else {
-                          @for (summaryLine of summarizePreviewByProject(preview.lineItems); track summaryLine.projectId) {
-                            <tr class="border-t border-border/60">
-                              <td class="px-3 py-2 align-top whitespace-nowrap">{{ previewPeriodLabel() }}</td>
-                              <td class="px-3 py-2 align-top">{{ summaryLine.projectLabel }}</td>
-                              <td class="px-3 py-2 text-right align-top tabular-nums whitespace-nowrap">
-                                {{ formatHours(summaryLine.hours) }}
-                              </td>
-                              <td class="px-3 py-2 text-right align-top tabular-nums whitespace-nowrap">
-                                {{ formatMoney(summaryLine.lineNet) }}
-                              </td>
-                              <td class="px-3 py-2 text-right align-top tabular-nums whitespace-nowrap">
-                                {{ formatMoney(summaryLine.taxAmount) }}
-                              </td>
-                              <td class="px-3 py-2 text-right align-top tabular-nums whitespace-nowrap">
-                                {{ formatMoney(summaryLine.lineGross) }}
-                              </td>
-                            </tr>
-                          }
-                        }
-                      </tbody>
-                      <tfoot class="border-t border-border bg-muted/20">
-                        <tr>
-                          <td class="px-3 py-2 text-xs font-semibold uppercase text-muted-foreground" colspan="3">
-                            Totals
-                          </td>
-                          <td class="px-3 py-2 text-right font-semibold tabular-nums whitespace-nowrap">
-                            {{ formatMoney(preview.subtotalNet) }}
-                          </td>
-                          <td class="px-3 py-2 text-right font-semibold tabular-nums whitespace-nowrap">
-                            {{ formatMoney(preview.totalTax) }}
-                          </td>
-                          <td class="px-3 py-2 text-right font-semibold tabular-nums whitespace-nowrap">
-                            {{ formatMoney(preview.totalGross) }}
-                          </td>
-                        </tr>
-                      </tfoot>
-                    </table>
+                </hlm-dialog-header>
+                <div class="flex flex-1 flex-col gap-3 overflow-auto px-6 py-4">
+                  <div class="grid gap-3 sm:grid-cols-2">
+                    <label class="grid gap-1 text-sm">
+                      <span>Status *</span>
+                      <div
+                        hlmCombobox
+                        [value]="selectedPreviewStatusOption()"
+                        [itemToString]="optionToLabel"
+                        [isItemEqualToValue]="isSameValueOption"
+                        (valueChange)="onPreviewStatusValueChange($event)"
+                      >
+                        <hlm-combobox-trigger class="w-full justify-between">
+                          <span>{{ selectedPreviewStatusOption()?.label ?? 'Select status' }}</span>
+                        </hlm-combobox-trigger>
+                        <ng-template hlmComboboxPortal>
+                          <div hlmComboboxContent>
+                            <div hlmComboboxList>
+                              @for (status of initialStatusOptions; track status.value) {
+                                <hlm-combobox-item [value]="status">{{
+                                  status.label
+                                }}</hlm-combobox-item>
+                              }
+                            </div>
+                          </div>
+                        </ng-template>
+                      </div>
+                    </label>
+
+                    <label class="grid gap-1 text-sm">
+                      <span>Line view</span>
+                      <div
+                        hlmCombobox
+                        [value]="selectedPreviewLineViewOption()"
+                        [itemToString]="optionToLabel"
+                        [isItemEqualToValue]="isSameValueOption"
+                        (valueChange)="onPreviewLineViewValueChange($event)"
+                      >
+                        <hlm-combobox-trigger class="w-full justify-between">
+                          <span>{{ selectedPreviewLineViewOption()?.label ?? 'Select view' }}</span>
+                        </hlm-combobox-trigger>
+                        <ng-template hlmComboboxPortal>
+                          <div hlmComboboxContent>
+                            <div hlmComboboxList>
+                              @for (view of previewLineViewOptions; track view.value) {
+                                <hlm-combobox-item [value]="view">{{
+                                  view.label
+                                }}</hlm-combobox-item>
+                              }
+                            </div>
+                          </div>
+                        </ng-template>
+                      </div>
+                    </label>
                   </div>
+
+                  @for (preview of store.invoicePreviews(); track preview.groupKey) {
+                    <div class="rounded-md border border-border p-3">
+                      <p class="text-sm font-semibold">
+                        Group {{ preview.groupKey }} · {{ preview.lineItems.length }} lines
+                      </p>
+                      <div class="mt-2 overflow-x-auto rounded-md border border-border">
+                        <table class="w-full min-w-[980px] table-fixed text-sm">
+                          <colgroup>
+                            <col class="w-[16%]" />
+                            <col class="w-[44%]" />
+                            <col class="w-[10%]" />
+                            <col class="w-[10%]" />
+                            <col class="w-[10%]" />
+                            <col class="w-[10%]" />
+                          </colgroup>
+                          <thead
+                            class="bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground"
+                          >
+                            <tr>
+                              <th class="px-3 py-2 font-medium">Period</th>
+                              <th class="px-3 py-2 font-medium">Project / Order</th>
+                              <th class="px-3 py-2 text-right font-medium">Hours</th>
+                              <th class="px-3 py-2 text-right font-medium">Net</th>
+                              <th class="px-3 py-2 text-right font-medium">VAT</th>
+                              <th class="px-3 py-2 text-right font-medium">Gross</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            @if (selectedPreviewLineView() === 'detailed') {
+                              @for (line of preview.lineItems; track line.timeEntryId) {
+                                <tr class="border-t border-border/60">
+                                  <td class="px-3 py-2 align-top whitespace-nowrap">
+                                    {{ line.workDate }}
+                                  </td>
+                                  <td class="px-3 py-2 align-top">
+                                    {{ previewLineProjectLabel(line) }}
+                                  </td>
+                                  <td
+                                    class="px-3 py-2 text-right align-top tabular-nums whitespace-nowrap"
+                                  >
+                                    {{ formatHours(line.hours) }}
+                                  </td>
+                                  <td
+                                    class="px-3 py-2 text-right align-top tabular-nums whitespace-nowrap"
+                                  >
+                                    {{ formatMoney(line.lineNet) }}
+                                  </td>
+                                  <td
+                                    class="px-3 py-2 text-right align-top tabular-nums whitespace-nowrap"
+                                  >
+                                    {{ formatMoney(line.taxAmount) }}
+                                  </td>
+                                  <td
+                                    class="px-3 py-2 text-right align-top tabular-nums whitespace-nowrap"
+                                  >
+                                    {{ formatMoney(line.lineGross) }}
+                                  </td>
+                                </tr>
+                              }
+                            } @else {
+                              @for (
+                                summaryLine of summarizePreviewByProject(preview.lineItems);
+                                track summaryLine.projectId
+                              ) {
+                                <tr class="border-t border-border/60">
+                                  <td class="px-3 py-2 align-top whitespace-nowrap">
+                                    {{ previewPeriodLabel() }}
+                                  </td>
+                                  <td class="px-3 py-2 align-top">
+                                    {{ summaryLine.projectLabel }}
+                                  </td>
+                                  <td
+                                    class="px-3 py-2 text-right align-top tabular-nums whitespace-nowrap"
+                                  >
+                                    {{ formatHours(summaryLine.hours) }}
+                                  </td>
+                                  <td
+                                    class="px-3 py-2 text-right align-top tabular-nums whitespace-nowrap"
+                                  >
+                                    {{ formatMoney(summaryLine.lineNet) }}
+                                  </td>
+                                  <td
+                                    class="px-3 py-2 text-right align-top tabular-nums whitespace-nowrap"
+                                  >
+                                    {{ formatMoney(summaryLine.taxAmount) }}
+                                  </td>
+                                  <td
+                                    class="px-3 py-2 text-right align-top tabular-nums whitespace-nowrap"
+                                  >
+                                    {{ formatMoney(summaryLine.lineGross) }}
+                                  </td>
+                                </tr>
+                              }
+                            }
+                          </tbody>
+                          <tfoot class="border-t border-border bg-muted/20">
+                            <tr>
+                              <td
+                                class="px-3 py-2 text-xs font-semibold uppercase text-muted-foreground"
+                                colspan="3"
+                              >
+                                Totals
+                              </td>
+                              <td
+                                class="px-3 py-2 text-right font-semibold tabular-nums whitespace-nowrap"
+                              >
+                                {{ formatMoney(preview.subtotalNet) }}
+                              </td>
+                              <td
+                                class="px-3 py-2 text-right font-semibold tabular-nums whitespace-nowrap"
+                              >
+                                {{ formatMoney(preview.totalTax) }}
+                              </td>
+                              <td
+                                class="px-3 py-2 text-right font-semibold tabular-nums whitespace-nowrap"
+                              >
+                                {{ formatMoney(preview.totalGross) }}
+                              </td>
+                            </tr>
+                          </tfoot>
+                        </table>
+                      </div>
+                    </div>
+                  }
                 </div>
-              }
+                <hlm-dialog-footer class="justify-end gap-2 border-t border-border px-6 py-4">
+                  <button hlmBtn type="button" variant="outline" hlmDialogClose>Cancel</button>
+                  <button
+                    hlmBtn
+                    type="button"
+                    [disabled]="store.isLoading()"
+                    (click)="confirmGenerateFromPreview()"
+                  >
+                    Confirm generate
+                  </button>
+                </hlm-dialog-footer>
               </div>
-              <hlm-dialog-footer class="justify-end gap-2 border-t border-border px-6 py-4">
-                <button hlmBtn type="button" variant="outline" hlmDialogClose>Cancel</button>
-                <button hlmBtn type="button" [disabled]="store.isLoading()" (click)="confirmGenerateFromPreview()">
-                  Confirm generate
-                </button>
-              </hlm-dialog-footer>
-            </div>
-          </hlm-dialog-content>
-        </ng-template>
-      </hlm-dialog>
+            </hlm-dialog-content>
+          </ng-template>
+        </hlm-dialog>
+      </div>
     </section>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -694,7 +789,10 @@ export class InvoicesPage implements OnInit {
     this.generationForm.controls.mode.setValue(option?.value ?? 'per_project');
   }
 
-  protected selectedEditStatusOption(): { label: string; value: InvoiceStatusUpdateInput['status'] } | null {
+  protected selectedEditStatusOption(): {
+    label: string;
+    value: InvoiceStatusUpdateInput['status'];
+  } | null {
     const value = this.editForm.controls.status.value;
     return this.statusOptions.find((option) => option.value === value) ?? null;
   }
@@ -705,26 +803,33 @@ export class InvoicesPage implements OnInit {
     this.editForm.controls.status.setValue(option?.value ?? InvoiceStatus.CONCEPT);
   }
 
-  protected selectedPreviewStatusOption():
-    | { label: string; value: InvoiceStatus.CONCEPT | InvoiceStatus.PROFORMA | InvoiceStatus.OPEN }
-    | null {
-    return this.initialStatusOptions.find((option) => option.value === this.selectedPreviewStatus()) ?? null;
+  protected selectedPreviewStatusOption(): {
+    label: string;
+    value: InvoiceStatus.CONCEPT | InvoiceStatus.PROFORMA | InvoiceStatus.OPEN;
+  } | null {
+    return (
+      this.initialStatusOptions.find((option) => option.value === this.selectedPreviewStatus()) ??
+      null
+    );
   }
 
   protected onPreviewStatusValueChange(
-    option:
-      | { label: string; value: InvoiceStatus.CONCEPT | InvoiceStatus.PROFORMA | InvoiceStatus.OPEN }
-      | null,
+    option: {
+      label: string;
+      value: InvoiceStatus.CONCEPT | InvoiceStatus.PROFORMA | InvoiceStatus.OPEN;
+    } | null,
   ): void {
     this.selectedPreviewStatus.set(option?.value ?? InvoiceStatus.CONCEPT);
   }
 
-  protected selectedPreviewLineViewOption():
-    | { label: string; value: 'detailed' | 'summary' }
-    | null {
+  protected selectedPreviewLineViewOption(): {
+    label: string;
+    value: 'detailed' | 'summary';
+  } | null {
     return (
-      this.previewLineViewOptions.find((option) => option.value === this.selectedPreviewLineView()) ??
-      null
+      this.previewLineViewOptions.find(
+        (option) => option.value === this.selectedPreviewLineView(),
+      ) ?? null
     );
   }
 

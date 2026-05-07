@@ -77,21 +77,22 @@ import { ClientsTableComponent } from './components/clients-table.component';
           </hlm-sheet-content>
         </ng-template>
       </hlm-sheet>
-      <div hlmSeparator></div>
+      <!-- <div hlmSeparator></div> -->
 
-      <app-clients-feedback-state
-        [storeError]="store.error()"
-        [isLoading]="showLoadingSpinner()"
-      />
-
-      <app-clients-table
-        [clients]="store.clients()"
-        [accentSwatchResolver]="clientAccentSwatch"
-        (addRequested)="openAddMode()"
-        (editRequested)="editClient($event)"
-        (deleteRequested)="deleteClient($event)"
-        (archiveRequested)="archiveClient($event)"
-      />
+      <div class="rounded-xl border border-border bg-card p-6 shadow-sm">
+        <app-clients-feedback-state
+          [storeError]="store.error()"
+          [isLoading]="showLoadingSpinner()"
+        />
+        <app-clients-table
+          [clients]="store.clients()"
+          [accentSwatchResolver]="clientAccentSwatch"
+          (addRequested)="openAddMode()"
+          (editRequested)="editClient($event)"
+          (deleteRequested)="deleteClient($event)"
+          (archiveRequested)="archiveClient($event)"
+        />
+      </div>
     </section>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,

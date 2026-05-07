@@ -12,7 +12,10 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HlmSeparatorImports } from '@spartan-ng/helm/separator';
 import { HlmSheetImports } from '@spartan-ng/helm/sheet';
 import { ToastService } from '../../../core/feedback/toast.service';
-import { activeLookup, selectionFromValueChange } from '../../../shared/components/combobox-selection/combobox-selection.util';
+import {
+  activeLookup,
+  selectionFromValueChange,
+} from '../../../shared/components/combobox-selection/combobox-selection.util';
 import { FeatureHeaderActionsComponent } from '../../../shared/components/feature-header-actions/feature-header-actions.component';
 import { ClientsStore } from '../../clients/state/clients.store';
 import { BillingModel, ProjectCreateInput, ProjectUpdateInput } from '../models/project.model';
@@ -44,55 +47,57 @@ import { ProjectsTableComponent } from './components/projects-table.component';
           (addRequested)="openAddMode()"
           (refreshRequested)="refreshProjects()"
         />
-          <button #sheetOpenButton class="hidden" hlmSheetTrigger side="right" type="button"></button>
-          <ng-template hlmSheetPortal>
-            <hlm-sheet-content class="w-full border-border/40 sm:max-w-xl">
-              <div hlmSheetHeader>
-                <h2 hlmSheetTitle>{{ isEditing() ? 'Edit project' : 'Add project' }}</h2>
-              </div>
-              <app-projects-sheet-form
-                [form]="projectForm"
-                [isEditing]="isEditing()"
-                [isLoading]="store.isLoading()"
-                [isValid]="projectForm.valid && hasSelectedClient()"
-                [clientOptions]="clientOptions()"
-                [selectedClientOption]="selectedClientOption()"
-                [billingModelDropdownOptions]="billingModelDropdownOptions"
-                [statusDropdownOptions]="statusDropdownOptions"
-                [useOrdersDropdownOptions]="useOrdersDropdownOptions"
-                [selectedBillingOption]="selectedBillingOption()"
-                [selectedStatusOption]="selectedStatusOption()"
-                [selectedUseOrdersOption]="selectedUseOrdersOption()"
-                [optionToLabel]="optionToLabel"
-                [isSameOption]="isSameOption"
-                [comboboxItemToLabel]="comboboxItemToLabel"
-                [isSameLabeledOption]="isSameLabeledOption"
-                (submitted)="submitProject()"
-                (clientSearchChanged)="onClientSearchChange($event)"
-                (clientValueChanged)="onClientValueChange($event)"
-                (billingValueChanged)="onBillingValueChange($event)"
-                (statusValueChanged)="onStatusValueChange($event)"
-                (useOrdersValueChanged)="onUseOrdersValueChange($event)"
-                (clearRequested)="resetForm()"
-                (cancelRequested)="cancelSheet()"
-              />
-              <button #sheetCloseButton class="hidden" hlmSheetClose type="button"></button>
-            </hlm-sheet-content>
-          </ng-template>
+        <button #sheetOpenButton class="hidden" hlmSheetTrigger side="right" type="button"></button>
+        <ng-template hlmSheetPortal>
+          <hlm-sheet-content class="w-full border-border/40 sm:max-w-xl">
+            <div hlmSheetHeader>
+              <h2 hlmSheetTitle>{{ isEditing() ? 'Edit project' : 'Add project' }}</h2>
+            </div>
+            <app-projects-sheet-form
+              [form]="projectForm"
+              [isEditing]="isEditing()"
+              [isLoading]="store.isLoading()"
+              [isValid]="projectForm.valid && hasSelectedClient()"
+              [clientOptions]="clientOptions()"
+              [selectedClientOption]="selectedClientOption()"
+              [billingModelDropdownOptions]="billingModelDropdownOptions"
+              [statusDropdownOptions]="statusDropdownOptions"
+              [useOrdersDropdownOptions]="useOrdersDropdownOptions"
+              [selectedBillingOption]="selectedBillingOption()"
+              [selectedStatusOption]="selectedStatusOption()"
+              [selectedUseOrdersOption]="selectedUseOrdersOption()"
+              [optionToLabel]="optionToLabel"
+              [isSameOption]="isSameOption"
+              [comboboxItemToLabel]="comboboxItemToLabel"
+              [isSameLabeledOption]="isSameLabeledOption"
+              (submitted)="submitProject()"
+              (clientSearchChanged)="onClientSearchChange($event)"
+              (clientValueChanged)="onClientValueChange($event)"
+              (billingValueChanged)="onBillingValueChange($event)"
+              (statusValueChanged)="onStatusValueChange($event)"
+              (useOrdersValueChanged)="onUseOrdersValueChange($event)"
+              (clearRequested)="resetForm()"
+              (cancelRequested)="cancelSheet()"
+            />
+            <button #sheetCloseButton class="hidden" hlmSheetClose type="button"></button>
+          </hlm-sheet-content>
+        </ng-template>
       </hlm-sheet>
-      <div hlmSeparator></div>
-      <app-projects-feedback-state
-        [clientLookupError]="clientLookupError()"
-        [storeError]="store.error()"
-        [isLoading]="showLoadingSpinner()"
-      />
-      <app-projects-table
-        [projects]="store.projects()"
-        (addRequested)="openAddMode()"
-        (editRequested)="editProject($event)"
-        (deleteRequested)="deleteProject($event)"
-        (archiveRequested)="archiveProject($event)"
-      />
+      <!-- <div hlmSeparator></div> -->
+      <div class="rounded-xl border border-border bg-card p-6 shadow-sm">
+        <app-projects-feedback-state
+          [clientLookupError]="clientLookupError()"
+          [storeError]="store.error()"
+          [isLoading]="showLoadingSpinner()"
+        />
+        <app-projects-table
+          [projects]="store.projects()"
+          (addRequested)="openAddMode()"
+          (editRequested)="editProject($event)"
+          (deleteRequested)="deleteProject($event)"
+          (archiveRequested)="archiveProject($event)"
+        />
+      </div>
     </section>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -102,7 +107,8 @@ export class ProjectsPage implements OnInit {
   private readonly clientsStore = inject(ClientsStore);
   private readonly formBuilder = inject(FormBuilder);
   private readonly toast = inject(ToastService);
-  @ViewChild('sheetOpenButton', { read: ElementRef }) private readonly sheetOpenButton?: ElementRef<HTMLButtonElement>;
+  @ViewChild('sheetOpenButton', { read: ElementRef })
+  private readonly sheetOpenButton?: ElementRef<HTMLButtonElement>;
   @ViewChild('sheetCloseButton', { read: ElementRef })
   private readonly sheetCloseButton?: ElementRef<HTMLButtonElement>;
   protected readonly selectedId = signal<number | null>(null);
@@ -110,7 +116,10 @@ export class ProjectsPage implements OnInit {
   protected readonly billingModelDropdownOptions: ReadonlyArray<{
     label: string;
     value: BillingModel | null;
-  }> = [{ label: 'None', value: null }, ...Object.values(BillingModel).map((value) => ({ label: value, value }))];
+  }> = [
+    { label: 'None', value: null },
+    ...Object.values(BillingModel).map((value) => ({ label: value, value })),
+  ];
   protected readonly statusDropdownOptions: ReadonlyArray<{ label: string; value: boolean }> = [
     { label: 'Active', value: true },
     { label: 'Inactive', value: false },
@@ -189,7 +198,7 @@ export class ProjectsPage implements OnInit {
     this.selectedId.set(project.id);
     this.selectedClientId = project.clientId;
     this.selectedClientOption.set(
-      this.clientOptions().find((option) => option.id === project.clientId) ?? null
+      this.clientOptions().find((option) => option.id === project.clientId) ?? null,
     );
     this.projectForm.setValue({
       name: project.name,
@@ -283,7 +292,7 @@ export class ProjectsPage implements OnInit {
 
   protected readonly isSameOption = (
     left: { id: number; label: string } | null,
-    right: { id: number; label: string } | null
+    right: { id: number; label: string } | null,
   ): boolean => left?.id === right?.id;
 
   protected selectedBillingOption(): { label: string; value: BillingModel | null } | null {
@@ -322,7 +331,9 @@ export class ProjectsPage implements OnInit {
     this.clientLookupError.set(null);
   }
 
-  protected onBillingValueChange(option: { label: string; value: BillingModel | null } | null): void {
+  protected onBillingValueChange(
+    option: { label: string; value: BillingModel | null } | null,
+  ): void {
     this.projectForm.controls.billingModel.setValue(option?.value ?? null);
   }
 
@@ -339,12 +350,12 @@ export class ProjectsPage implements OnInit {
   }
 
   protected readonly comboboxItemToLabel = (
-    option: { label: string; value: boolean | BillingModel | null } | null
+    option: { label: string; value: boolean | BillingModel | null } | null,
   ): string => option?.label ?? '';
 
   protected readonly isSameLabeledOption = (
     left: { label: string; value: boolean | BillingModel | null } | null,
-    right: { label: string; value: boolean | BillingModel | null } | null
+    right: { label: string; value: boolean | BillingModel | null } | null,
   ): boolean => left?.value === right?.value;
 
   private clientLabel(clientId: number, clientName: string): string {
