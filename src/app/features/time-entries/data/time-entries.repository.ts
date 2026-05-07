@@ -24,6 +24,7 @@ const TIME_ENTRY_SELECT =
 type ClientLookupRow = {
   id: number;
   name: string;
+  email: string | null;
   accent_color: string | null;
   is_active: boolean;
 };
@@ -41,6 +42,7 @@ type OrderLookupRow = {
   id: number;
   project_id: number;
   code: string;
+  title: string;
   is_active: boolean;
 };
 
@@ -79,10 +81,12 @@ export class TimeEntriesRepository {
       return toTimeEntryVM(
         toTimeEntryModel(record),
         client?.name ?? 'Unknown client',
+        client?.email ?? null,
         normalizeClientAccentHex(client?.accent_color ?? null) ?? null,
         project?.code ?? 'UNKNOWN',
         project?.name ?? 'Unknown project',
         order?.code ?? null,
+        order?.title ?? null,
       );
     });
   }
@@ -208,10 +212,12 @@ export class TimeEntriesRepository {
     return toTimeEntryVM(
       toTimeEntryModel(record),
       client?.name ?? 'Unknown client',
+      client?.email ?? null,
       normalizeClientAccentHex(client?.accent_color ?? null) ?? null,
       project?.code ?? 'UNKNOWN',
       project?.name ?? 'Unknown project',
       order?.code ?? null,
+      order?.title ?? null,
     );
   }
 
@@ -262,7 +268,7 @@ export class TimeEntriesRepository {
   private async getClientById(id: number): Promise<ClientLookupRow | null> {
     const { data: row, error } = await this.supabase
       .from('clients')
-      .select('id, name, accent_color, is_active')
+      .select('id, name, email, accent_color, is_active')
       .eq('id', id)
       .maybeSingle<ClientLookupRow>();
     throwIfError(error, 'Failed to load client.');
@@ -282,7 +288,7 @@ export class TimeEntriesRepository {
   private async getOrderById(id: number): Promise<OrderLookupRow | null> {
     const { data: row, error } = await this.supabase
       .from('orders')
-      .select('id, project_id, code, is_active')
+      .select('id, project_id, code, title, is_active')
       .eq('id', id)
       .maybeSingle<OrderLookupRow>();
     throwIfError(error, 'Failed to load order.');
@@ -292,7 +298,7 @@ export class TimeEntriesRepository {
   private async getClientsById(): Promise<Map<number, ClientLookupRow>> {
     const { data: rows, error } = await this.supabase
       .from('clients')
-      .select('id, name, accent_color, is_active')
+      .select('id, name, email, accent_color, is_active')
       .returns<ClientLookupRow[]>();
     throwIfError(error, 'Failed to load clients.');
     return new Map((rows ?? []).map((row) => [row.id, row]));
@@ -310,7 +316,7 @@ export class TimeEntriesRepository {
   private async getOrdersById(): Promise<Map<number, OrderLookupRow>> {
     const { data: rows, error } = await this.supabase
       .from('orders')
-      .select('id, project_id, code, is_active')
+      .select('id, project_id, code, title, is_active')
       .returns<OrderLookupRow[]>();
     throwIfError(error, 'Failed to load orders.');
     return new Map((rows ?? []).map((row) => [row.id, row]));

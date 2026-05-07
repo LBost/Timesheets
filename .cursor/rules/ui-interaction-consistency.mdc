@@ -17,6 +17,15 @@ alwaysApply: true
 - Preserve left alignment, bottom anchoring, and non-stretched action buttons in sheet forms.
 - Reuse shared app-level components in `src/app/shared/components/` for repeated UI patterns.
 
+## Dropdown/Menu surface style
+
+- Avoid heavy/contrasty menu borders (the "ugly border" look) on dropdown/context menus.
+- Prefer subtle menu surfaces that blend with app chrome:
+  - `border-border/40` to `border-border/60`
+  - `bg-card/95` or similar muted card surface
+  - soft shadow only (no hard outline effect)
+- If a menu visual treatment looks visually louder than nearby controls/cards, tone it down before shipping.
+
 ## Combobox stability pattern (important)
 
 - For searchable comboboxes, treat selected id (`selected...Id`) as source of truth.

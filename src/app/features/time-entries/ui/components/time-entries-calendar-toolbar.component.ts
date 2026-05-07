@@ -1,12 +1,13 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
+import { HlmDropdownMenuImports } from '@spartan-ng/helm/dropdown-menu';
 import { HlmInputImports } from '@spartan-ng/helm/input';
 import { NgIcon } from '@ng-icons/core';
 import { HlmIcon } from '@spartan-ng/helm/icon';
 
 @Component({
   selector: 'app-time-entries-calendar-toolbar',
-  imports: [HlmButtonImports, HlmInputImports, NgIcon, HlmIcon],
+  imports: [HlmButtonImports, HlmDropdownMenuImports, HlmInputImports, NgIcon, HlmIcon],
   template: `
     <header class="flex flex-wrap items-end justify-between gap-3">
       <div>
@@ -89,6 +90,25 @@ import { HlmIcon } from '@spartan-ng/helm/icon';
           size="icon"
           variant="outline"
           class="cursor-pointer"
+          aria-label="More actions"
+          [hlmDropdownMenuTrigger]="periodActionMenu"
+        >
+          <ng-icon hlm size="sm" name="lucideEllipsis" />
+        </button>
+        <ng-template #periodActionMenu>
+          <hlm-dropdown-menu>
+            <button hlmDropdownMenuItem (triggered)="emailToRequested.emit()">
+              <ng-icon hlm size="sm" name="lucideMail" aria-hidden="true" />
+              Email to
+            </button>
+          </hlm-dropdown-menu>
+        </ng-template>
+        <button
+          hlmBtn
+          type="button"
+          size="icon"
+          variant="outline"
+          class="cursor-pointer"
           [attr.aria-label]="'Add entry for ' + todayIso()"
           (click)="addToday.emit()"
         >
@@ -110,5 +130,6 @@ export class TimeEntriesCalendarToolbarComponent {
   readonly weekInputChange = output<Event>();
   readonly addToday = output<void>();
   readonly refreshRequested = output<void>();
+  readonly emailToRequested = output<void>();
   readonly viewModeChange = output<'month' | 'week'>();
 }

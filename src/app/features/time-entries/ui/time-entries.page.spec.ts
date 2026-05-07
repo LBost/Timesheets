@@ -171,10 +171,12 @@ describe('TimeEntriesPage', () => {
       lockedAt: new Date(),
       createdAt: new Date(),
       clientName: 'C',
+      clientEmail: 'c@example.com',
       clientAccentColor: null,
       projectCode: 'P',
       projectName: 'N',
       orderCode: null,
+      orderName: null,
     } as any);
 
     const fixture = TestBed.createComponent(TimeEntriesPage);
@@ -189,5 +191,153 @@ describe('TimeEntriesPage', () => {
 
     expect(storeMock.updateEntry).not.toHaveBeenCalled();
     expect(storeMock.deleteEntry).not.toHaveBeenCalled();
+  });
+
+  it('computeEmailClientChoices groups entries by client', () => {
+    const fixture = TestBed.createComponent(TimeEntriesPage);
+    const page = fixture.componentInstance as any;
+
+    expect(
+      page.computeEmailClientChoices([
+        { clientId: 2, clientName: 'Beta', clientEmail: null },
+        { clientId: 1, clientName: 'Acme', clientEmail: 'acme@example.com' },
+        { clientId: 1, clientName: 'Acme', clientEmail: null },
+      ]),
+    ).toEqual([
+      { clientId: 1, clientName: 'Acme', clientEmail: 'acme@example.com', entryCount: 2 },
+      { clientId: 2, clientName: 'Beta', clientEmail: null, entryCount: 1 },
+    ]);
+  });
+
+  it('buildEmailBody includes date for aggregated email and omits empty optional fields', () => {
+    const fixture = TestBed.createComponent(TimeEntriesPage);
+    const page = fixture.componentInstance as any;
+
+    const body = page.buildEmailBody(
+      [
+        {
+          id: 1,
+          date: '2026-05-05',
+          projectCode: 'PRJ',
+          projectName: 'Project',
+          orderCode: null,
+          orderName: null,
+          hours: 2,
+          description: '',
+        },
+      ],
+      true,
+    );
+
+    expect(body).toContain('- Date:');
+    expect(body).toContain('- Project code: PRJ');
+    expect(body).toContain('- Project name: Project');
+    expect(body).toContain('- Hours: 2.00');
+    expect(body).not.toContain('- Order code:');
+    expect(body).not.toContain('- Description:');
+  });
+
+  it('emails day entries with day subject and no date line in rows', () => {
+    const fixture = TestBed.createComponent(TimeEntriesPage);
+    const page = fixture.componentInstance as any;
+
+    const openEmailDraftSpy = vi.spyOn(page as any, 'openEmailDraft').mockImplementation(() => undefined);
+    storeMock.entriesByDate.mockReturnValue({
+      '2026-05-07': [
+        {
+          id: 1,
+          date: '2026-05-07',
+          clientEmail: 'team@example.com',
+          projectCode: 'PRJ',
+          projectName: 'Project',
+          orderCode: null,
+          orderName: null,
+          hours: 2,
+          description: '',
+        },
+      ],
+    } as any);
+
+    page.emailDayEntries('2026-05-07');
+
+    expect(openEmailDraftSpy).toHaveBeenCalledWith(
+      expect.arrayContaining([expect.objectContaining({ id: 1 })]),
+      expect.stringContaining('Time entries -'),
+      false,
+    );
+  });
+
+  it('emails current period and includes date line when in week view', () => {
+    const fixture = TestBed.createComponent(TimeEntriesPage);
+    const page = fixture.componentInstance as any;
+
+    const openEmailDraftSpy = vi.spyOn(page as any, 'openEmailDraft').mockImplementation(() => undefined);
+    page.viewMode.set('week');
+    page.selectedWeekStart.set(new Date(2026, 4, 4));
+    storeMock.entriesByDate.mockReturnValue({
+      '2026-05-04': [
+        {
+          id: 10,
+          date: '2026-05-04',
+          clientEmail: 'team@example.com',
+          projectCode: 'PRJ',
+          projectName: 'Project',
+          orderCode: null,
+          orderName: null,
+          hours: 8,
+          description: 'Work',
+        },
+      ],
+    } as any);
+
+    page.emailCurrentPeriod();
+
+    expect(openEmailDraftSpy).toHaveBeenCalledWith(
+      expect.arrayContaining([expect.objectContaining({ id: 10 })]),
+      expect.stringContaining('Time entries - WK'),
+      true,
+    );
+  });
+
+  it('asks client selection before drafting when multiple clients are present', () => {
+    const fixture = TestBed.createComponent(TimeEntriesPage);
+    const page = fixture.componentInstance as any;
+    const launchSpy = vi.spyOn(page as any, 'launchEmailDraft').mockImplementation(() => undefined);
+
+    page.openEmailDraft(
+      [
+        { id: 1, clientId: 1, clientName: 'Acme', clientEmail: 'acme@example.com' },
+        { id: 2, clientId: 2, clientName: 'Beta', clientEmail: 'beta@example.com' },
+      ],
+      'Time entries - Test',
+      false,
+    );
+
+    expect(page.pendingEmailDraft()).toBeTruthy();
+    expect(launchSpy).not.toHaveBeenCalled();
+  });
+
+  it('continues draft with selected client entries after picker selection', () => {
+    const fixture = TestBed.createComponent(TimeEntriesPage);
+    const page = fixture.componentInstance as any;
+    const launchSpy = vi.spyOn(page as any, 'launchEmailDraft').mockImplementation(() => undefined);
+
+    page.pendingEmailDraft.set({
+      entries: [
+        { id: 1, clientId: 1, clientName: 'Acme', clientEmail: 'acme@example.com' },
+        { id: 2, clientId: 2, clientName: 'Beta', clientEmail: 'beta@example.com' },
+      ],
+      subject: 'Time entries - Test',
+      includeDate: true,
+    });
+
+    page.chooseEmailClient(2);
+
+    expect(launchSpy).toHaveBeenCalledWith(
+      [expect.objectContaining({ id: 2, clientId: 2 })],
+      'Time entries - Test',
+      true,
+    );
+    expect(page.pendingEmailDraft()).toBeNull();
   });
 });

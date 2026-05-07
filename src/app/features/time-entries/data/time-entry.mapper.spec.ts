@@ -45,9 +45,20 @@ describe('time-entry.mapper', () => {
       createdAt: new Date('2026-05-01T00:00:00Z'),
     });
 
-    const vm = toTimeEntryVM(model, 'Client A', '#6366f1', 'PRJ', 'Project', null);
+    const vm = toTimeEntryVM(
+      model,
+      'Client A',
+      'client@example.com',
+      '#6366f1',
+      'PRJ',
+      'Project',
+      null,
+      null,
+    );
     expect(vm.clientName).toBe('Client A');
+    expect(vm.clientEmail).toBe('client@example.com');
     expect(vm.clientAccentColor).toBe('#6366f1');
     expect(vm.projectCode).toBe('PRJ');
+    expect(vm.orderName).toBeNull();
   });
 });

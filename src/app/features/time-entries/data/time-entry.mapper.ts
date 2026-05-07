@@ -66,18 +66,22 @@ export function toTimeEntryModel(record: TimeEntryRecord): TimeEntryModel {
 export function toTimeEntryVM(
   model: TimeEntryModel,
   clientName: string,
+  clientEmail: string | null,
   clientAccentColor: string | null,
   projectCode: string,
   projectName: string,
   orderCode: string | null,
+  orderName: string | null,
 ): TimeEntryVM {
   return {
     ...model,
     clientName,
+    clientEmail,
     clientAccentColor,
     projectCode,
     projectName,
     orderCode,
+    orderName,
   };
 }
 

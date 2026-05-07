@@ -1,7 +1,8 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideLayers, lucidePlus } from '@ng-icons/lucide';
+import { lucideEllipsis, lucideLayers, lucideMail, lucidePlus } from '@ng-icons/lucide';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
+import { HlmDropdownMenuImports } from '@spartan-ng/helm/dropdown-menu';
 import { HlmIcon } from '@spartan-ng/helm/icon';
 
 export type EntryInvoicedSummaryState = {
@@ -18,8 +19,8 @@ type CalendarDay = {
 
 @Component({
   selector: 'app-time-entries-calendar-grid',
-  imports: [HlmButtonImports, NgIcon, HlmIcon],
-  providers: [provideIcons({ lucidePlus, lucideLayers })],
+  imports: [HlmButtonImports, HlmDropdownMenuImports, NgIcon, HlmIcon],
+  providers: [provideIcons({ lucidePlus, lucideLayers, lucideEllipsis, lucideMail })],
   template: `
     <div class="overflow-hidden rounded-lg border border-border">
       <div class="grid grid-cols-7 border-b border-border bg-muted/40 text-xs font-medium uppercase tracking-wide">
@@ -37,9 +38,22 @@ type CalendarDay = {
             <div class="mb-2 flex items-center justify-between text-xs">
               <span class="font-medium">{{ day.dayNumber }}</span>
               @if (day.date) {
-                <button hlmBtn variant="ghost" size="icon" type="button" class="cursor-pointer" (click)="addForDate.emit(day.date)">
-                  <ng-icon hlm name="lucidePlus" size="sm" aria-hidden="true" />
-                </button>
+                <div class="flex items-center gap-1">
+                  <button hlmBtn size="icon-sm" variant="ghost" type="button" class="cursor-pointer" [hlmDropdownMenuTrigger]="dayMenu">
+                    <ng-icon hlm name="lucideEllipsis" size="sm" aria-hidden="true" />
+                  </button>
+                  <ng-template #dayMenu>
+                    <hlm-dropdown-menu>
+                      <button hlmDropdownMenuItem (triggered)="emailToRequested.emit(day.date)">
+                        <ng-icon hlm name="lucideMail" size="sm" aria-hidden="true" />
+                        Email to
+                      </button>
+                    </hlm-dropdown-menu>
+                  </ng-template>
+                  <button hlmBtn variant="ghost" size="icon" type="button" class="cursor-pointer" (click)="addForDate.emit(day.date)">
+                    <ng-icon hlm name="lucidePlus" size="sm" aria-hidden="true" />
+                  </button>
+                </div>
               }
             </div>
 
@@ -139,6 +153,7 @@ export class TimeEntriesCalendarGridComponent {
   readonly formatDayHeading = input.required<(isoDate: string) => string>();
 
   readonly addForDate = output<string>();
+  readonly emailToRequested = output<string>();
   readonly editEntry = output<number>();
   readonly openDayEntriesPicker = output<string>();
 }

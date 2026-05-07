@@ -9,7 +9,14 @@ const USER_ID = '00000000-0000-0000-0000-000000000001';
 function seed(overrides: Partial<FakeTables> = {}): FakeTables {
   return {
     clients: [
-      { id: 1, user_id: USER_ID, name: 'Client A', accent_color: null, is_active: true },
+      {
+        id: 1,
+        user_id: USER_ID,
+        name: 'Client A',
+        email: 'client-a@example.com',
+        accent_color: null,
+        is_active: true,
+      },
     ],
     projects: [
       {
@@ -23,7 +30,7 @@ function seed(overrides: Partial<FakeTables> = {}): FakeTables {
       },
     ],
     orders: [
-      { id: 100, user_id: USER_ID, project_id: 10, code: 'ORD-1', is_active: true },
+      { id: 100, user_id: USER_ID, project_id: 10, code: 'ORD-1', title: 'Implementation', is_active: true },
     ],
     time_entries: [],
     ...overrides,
@@ -60,14 +67,24 @@ describe('TimeEntriesRepository', () => {
     const entries = await repository.listEntriesForMonth(2026, 4);
     expect(entries).toHaveLength(1);
     expect(entries[0].clientName).toBe('Client A');
+    expect(entries[0].clientEmail).toBe('client-a@example.com');
     expect(entries[0].clientAccentColor).toBeNull();
+    expect(entries[0].orderCode).toBe('ORD-1');
+    expect(entries[0].orderName).toBe('Implementation');
   });
 
   it('hydrates client accent color on entries', async () => {
     configure(
       seed({
         clients: [
-          { id: 1, user_id: USER_ID, name: 'Client A', accent_color: '#22c55e', is_active: true },
+          {
+            id: 1,
+            user_id: USER_ID,
+            name: 'Client A',
+            email: 'client-a@example.com',
+            accent_color: '#22c55e',
+            is_active: true,
+          },
         ],
       }),
     );

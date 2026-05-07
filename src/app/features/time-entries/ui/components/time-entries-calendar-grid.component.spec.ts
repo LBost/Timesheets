@@ -17,10 +17,12 @@ describe('TimeEntriesCalendarGridComponent', () => {
     lockedAt: null as Date | null,
     createdAt: new Date(),
     clientName: 'Client',
+    clientEmail: 'client@example.com',
     clientAccentColor: null as string | null,
     projectCode: 'PRJ',
     projectName: 'Project',
     orderCode: null as string | null,
+    orderName: null as string | null,
   };
 
   beforeEach(async () => {

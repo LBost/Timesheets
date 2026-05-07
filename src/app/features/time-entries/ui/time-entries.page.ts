@@ -9,6 +9,8 @@ import {
   signal,
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { HlmButtonImports } from '@spartan-ng/helm/button';
+import { HlmDialogImports } from '@spartan-ng/helm/dialog';
 import { HlmSeparatorImports } from '@spartan-ng/helm/separator';
 import { HlmSheetImports } from '@spartan-ng/helm/sheet';
 import { HlmSpinnerImports } from '@spartan-ng/helm/spinner';
@@ -22,7 +24,14 @@ import { SettingsStore } from '../../settings/state/settings.store';
 import { TimeEntryCreateInput, TimeEntryUpdateInput } from '../models/time-entry.model';
 import { TimeEntriesStore } from '../state/time-entries.store';
 import { provideIcons } from '@ng-icons/core';
-import { lucideCalendar, lucideLayers, lucidePlus, lucideRefreshCw } from '@ng-icons/lucide';
+import {
+  lucideCalendar,
+  lucideEllipsis,
+  lucideLayers,
+  lucideMail,
+  lucidePlus,
+  lucideRefreshCw,
+} from '@ng-icons/lucide';
 import { TimeEntriesCalendarToolbarComponent } from './components/time-entries-calendar-toolbar.component';
 import { TimeEntriesMonthSummaryComponent } from './components/time-entries-month-summary.component';
 import { TimeEntriesCalendarGridComponent } from './components/time-entries-calendar-grid.component';
@@ -45,6 +54,19 @@ type WeekDay = {
   dayNumber: number;
 };
 
+type EmailClientChoice = {
+  clientId: number;
+  clientName: string;
+  clientEmail: string | null;
+  entryCount: number;
+};
+
+type PendingEmailDraft = {
+  entries: Array<ReturnType<TimeEntriesPage['store']['entries']>[number]>;
+  subject: string;
+  includeDate: boolean;
+};
+
 export type EntryInvoicedSummary = {
   state: 'none' | 'partial' | 'all';
   invoiced: number;
@@ -55,6 +77,8 @@ export type EntryInvoicedSummary = {
   selector: 'app-time-entries-page',
   imports: [
     ReactiveFormsModule,
+    HlmButtonImports,
+    HlmDialogImports,
     HlmSeparatorImports,
     HlmSheetImports,
     HlmSpinnerImports,
@@ -65,7 +89,16 @@ export type EntryInvoicedSummary = {
     TimeEntriesDayPickerDialogComponent,
     TimeEntrySheetFormComponent,
   ],
-  providers: [provideIcons({ lucidePlus, lucideLayers, lucideCalendar, lucideRefreshCw })],
+  providers: [
+    provideIcons({
+      lucidePlus,
+      lucideLayers,
+      lucideCalendar,
+      lucideRefreshCw,
+      lucideEllipsis,
+      lucideMail,
+    }),
+  ],
   template: `
     <hlm-sheet>
       <section class="mx-auto flex w-full max-w-7xl flex-col gap-5">
@@ -80,6 +113,7 @@ export type EntryInvoicedSummary = {
           (weekInputChange)="onWeekInputChange($event)"
           (addToday)="openAddForDate(todayIso())"
           (refreshRequested)="refreshCurrentPeriod()"
+          (emailToRequested)="emailCurrentPeriod()"
           (viewModeChange)="onViewModeChange($event)"
         />
 
@@ -112,6 +146,7 @@ export type EntryInvoicedSummary = {
             [entryInvoicedSummary]="entryInvoicedSummaryFn"
             [formatDayHeading]="formatDayHeadingFn"
             (addForDate)="openAddForDate($event)"
+            (emailToRequested)="emailDayEntries($event)"
             (editEntry)="editEntry($event)"
             (openDayEntriesPicker)="openDayEntriesPicker($event)"
           />
@@ -123,6 +158,7 @@ export type EntryInvoicedSummary = {
             [entryClientAccent]="entryClientAccentFn"
             [formatDayHeading]="formatDayHeadingFn"
             (addForDate)="openAddForDate($event)"
+            (emailToRequested)="emailDayEntries($event)"
             (editEntry)="editEntry($event)"
           />
         }
@@ -171,6 +207,49 @@ export type EntryInvoicedSummary = {
           (closed)="closeDayEntriesPicker()"
           (entryPicked)="pickEntryFromDayPicker($event)"
         />
+        <hlm-dialog
+          [state]="emailClientPickerState()"
+          ariaLabel="Choose client for email"
+          [ariaModal]="true"
+          (closed)="closeEmailClientPicker()"
+        >
+          <ng-template hlmDialogPortal>
+            <hlm-dialog-content
+              [showCloseButton]="true"
+              class="max-h-[min(70vh,520px)] gap-0 overflow-hidden border-border p-0 shadow-sm sm:max-w-md"
+            >
+              <hlm-dialog-header class="border-b border-border px-4 pb-3 pe-14 pt-4 text-start">
+                <h2 hlmDialogTitle class="text-base">Choose a client</h2>
+                <p hlmDialogDescription class="text-xs">
+                  This selection contains entries for multiple clients.
+                </p>
+              </hlm-dialog-header>
+              <div class="max-h-[min(55vh,400px)] overflow-y-auto p-2">
+                @for (choice of emailClientChoices(); track choice.clientId) {
+                  <button
+                    hlmBtn
+                    variant="outline"
+                    type="button"
+                    class="mb-2 h-auto w-full justify-start px-3 py-2 text-left last:mb-0"
+                    (click)="chooseEmailClient(choice.clientId)"
+                  >
+                    <span class="flex flex-col items-start text-sm leading-tight">
+                      <span class="font-medium">{{ choice.clientName }}</span>
+                      <span class="text-xs text-muted-foreground">
+                        {{ choice.entryCount }} entries
+                        @if (choice.clientEmail) {
+                          · {{ choice.clientEmail }}
+                        } @else {
+                          · no email on client
+                        }
+                      </span>
+                    </span>
+                  </button>
+                }
+              </div>
+            </hlm-dialog-content>
+          </ng-template>
+        </hlm-dialog>
       </section>
     </hlm-sheet>
   `,
@@ -217,6 +296,13 @@ export class TimeEntriesPage implements OnInit {
     const d = this.dayEntriesPickerDate();
     return d ? `Entries for ${this.formatDayHeading(d)}` : '';
   });
+  protected readonly pendingEmailDraft = signal<PendingEmailDraft | null>(null);
+  protected readonly emailClientPickerState = computed(() =>
+    this.pendingEmailDraft() ? ('open' as const) : ('closed' as const),
+  );
+  protected readonly emailClientChoices = computed<EmailClientChoice[]>(() =>
+    this.computeEmailClientChoices(this.pendingEmailDraft()?.entries ?? []),
+  );
   protected readonly weekdayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   protected readonly viewMode = signal<'month' | 'week'>('month');
   private readonly hasInitialLoadCompleted = signal(false);
@@ -482,6 +568,30 @@ export class TimeEntriesPage implements OnInit {
     }
   }
 
+  protected emailDayEntries(date: string): void {
+    const entries = this.entriesForDate(date);
+    this.openEmailDraft(entries, `Time entries - ${this.formatDayHeading(date)}`, false);
+  }
+
+  protected emailCurrentPeriod(): void {
+    const entries = this.entriesForCurrentPeriod();
+    this.openEmailDraft(entries, `Time entries - ${this.periodLabel()}`, true);
+  }
+
+  protected closeEmailClientPicker(): void {
+    this.pendingEmailDraft.set(null);
+  }
+
+  protected chooseEmailClient(clientId: number): void {
+    const pending = this.pendingEmailDraft();
+    if (!pending) {
+      return;
+    }
+    const selectedEntries = pending.entries.filter((entry) => entry.clientId === clientId);
+    this.pendingEmailDraft.set(null);
+    this.launchEmailDraft(selectedEntries, pending.subject, pending.includeDate);
+  }
+
   protected openAddForDate(date: string): void {
     this.closeDayEntriesPicker();
     this.store.openAddForDate(date);
@@ -656,6 +766,90 @@ export class TimeEntriesPage implements OnInit {
 
   protected todayIso(): string {
     return this.toIsoDate(new Date());
+  }
+
+  private entriesForCurrentPeriod(): Array<ReturnType<typeof this.store.entries>[number]> {
+    if (this.viewMode() === 'month') {
+      return this.store.entries();
+    }
+    return this.weekDays().flatMap((day) => this.entriesForDate(day.date));
+  }
+
+  private openEmailDraft(
+    entries: Array<ReturnType<typeof this.store.entries>[number]>,
+    subject: string,
+    includeDate: boolean,
+  ): void {
+    if (entries.length === 0) {
+      this.toast.show('No time entries available for email.', 'info');
+      return;
+    }
+
+    const clientChoices = this.computeEmailClientChoices(entries);
+    if (clientChoices.length > 1) {
+      this.pendingEmailDraft.set({ entries, subject, includeDate });
+      return;
+    }
+
+    this.launchEmailDraft(entries, subject, includeDate);
+  }
+
+  private launchEmailDraft(
+    entries: Array<ReturnType<typeof this.store.entries>[number]>,
+    subject: string,
+    includeDate: boolean,
+  ): void {
+    const to = entries[0]?.clientEmail?.trim() ?? '';
+    const body = this.buildEmailBody(entries, includeDate);
+    const toPart = to ? encodeURIComponent(to) : '';
+    const url = `mailto:${toPart}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = url;
+  }
+
+  private computeEmailClientChoices(
+    entries: Array<ReturnType<typeof this.store.entries>[number]>,
+  ): EmailClientChoice[] {
+    const byClient = new Map<number, EmailClientChoice>();
+    for (const entry of entries) {
+      const existing = byClient.get(entry.clientId);
+      const normalizedEmail = entry.clientEmail?.trim() || null;
+      if (!existing) {
+        byClient.set(entry.clientId, {
+          clientId: entry.clientId,
+          clientName: entry.clientName,
+          clientEmail: normalizedEmail,
+          entryCount: 1,
+        });
+        continue;
+      }
+      existing.entryCount += 1;
+      if (!existing.clientEmail && normalizedEmail) {
+        existing.clientEmail = normalizedEmail;
+      }
+    }
+    return [...byClient.values()].sort((left, right) => left.clientName.localeCompare(right.clientName));
+  }
+
+  private buildEmailBody(
+    entries: Array<ReturnType<typeof this.store.entries>[number]>,
+    includeDate: boolean,
+  ): string {
+    const sorted = [...entries].sort((left, right) => left.date.localeCompare(right.date) || left.id - right.id);
+    return sorted
+      .map((entry, index) => {
+        const lines = [
+          `Entry ${index + 1}`,
+          ...(includeDate ? [`- Date: ${this.formatDayHeading(entry.date)}`] : []),
+          `- Project code: ${entry.projectCode}`,
+          `- Project name: ${entry.projectName}`,
+          ...(entry.orderCode ? [`- Order code: ${entry.orderCode}`] : []),
+          ...(entry.orderName ? [`- Order name: ${entry.orderName}`] : []),
+          `- Hours: ${entry.hours.toFixed(2)}`,
+          ...(entry.description.trim() ? [`- Description: ${entry.description.trim()}`] : []),
+        ];
+        return lines.join('\n');
+      })
+      .join('\n\n');
   }
 
   private formValue(): TimeEntryCreateInput {
