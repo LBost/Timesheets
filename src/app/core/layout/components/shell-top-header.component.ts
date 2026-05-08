@@ -20,7 +20,7 @@ import { HlmSidebarTrigger } from '@spartan-ng/helm/sidebar';
           <span class="sr-only">Toggle navigation sidebar</span>
         </button>
         <div
-          class="grid size-8 place-items-center rounded-lg bg-primary text-sm font-bold text-primary-foreground"
+          class="grid size-8 place-items-center rounded-lg bg-lime-500 text-sm font-bold text-primary-foreground"
         >
           TS
         </div>
