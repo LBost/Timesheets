@@ -3,7 +3,9 @@ import {
   boolean,
   check,
   date,
+  index,
   integer,
+  jsonb,
   pgTable,
   text,
   timestamp,
@@ -187,6 +189,23 @@ export const invoiceLineItems = pgTable('invoice_line_items', {
     .notNull(),
 });
 
+export const activityLogs = pgTable(
+  'activity_logs',
+  {
+    id: bigint('id', { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
+    userId: uuid('user_id').notNull(),
+    action: text('action').notNull(),
+    entityType: text('entity_type').notNull(),
+    entityId: bigint('entity_id', { mode: 'number' }),
+    summary: text('summary').notNull(),
+    metadata: jsonb('metadata').notNull().default({}),
+    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [index('activity_logs_user_created_at_idx').on(table.userId, table.createdAt)]
+);
+
 export const settings = pgTable(
   'settings',
   {
@@ -225,6 +244,9 @@ export type Invoice = typeof invoices.$inferSelect;
 
 export type NewInvoiceLineItem = typeof invoiceLineItems.$inferInsert;
 export type InvoiceLineItem = typeof invoiceLineItems.$inferSelect;
+
+export type NewActivityLog = typeof activityLogs.$inferInsert;
+export type ActivityLog = typeof activityLogs.$inferSelect;
 
 export type NewSettings = typeof settings.$inferInsert;
 export type Settings = typeof settings.$inferSelect;

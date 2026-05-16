@@ -18,6 +18,7 @@ import {
 } from '../models/invoice.model';
 import { InvoiceLineItemVM, InvoiceVM } from '../models/invoice.vm';
 import { TaxRateModel } from '../models/tax-rate.model';
+import { ActivityLogWriter } from '../../activity-logs/data/activity-log.writer';
 import {
   InvoiceLineItemRow,
   InvoiceRow,
@@ -43,6 +44,7 @@ const PLACEHOLDER_SEQUENCE_WIDTH = 2;
 export class InvoicesRepository {
   private readonly supabase: SupabaseClient = inject(SUPABASE_CLIENT);
   private readonly settingsRepository = inject(SettingsRepository);
+  private readonly activityLogWriter = inject(ActivityLogWriter);
 
   async listInvoices(): Promise<InvoiceVM[]> {
     const { data: rows, error } = await this.supabase
@@ -129,6 +131,8 @@ export class InvoicesRepository {
           }, new Map<number, EligibleEntry[]>()))
         : new Map<number, EligibleEntry[]>([[0, entries]]);
 
+    const clientNames = await this.getClientNamesById();
+    const clientName = clientNames.get(input.clientId) ?? 'Unknown client';
     const settings = input.status === InvoiceStatus.OPEN ? await this.settingsRepository.getSettings() : null;
     let nextInvoiceNumber =
       input.status === InvoiceStatus.OPEN
@@ -199,6 +203,9 @@ export class InvoicesRepository {
       }
 
       createdIds.push(invoiceRow!.id);
+      this.activityLogWriter.logInvoiceCreated(
+        toInvoiceVM(toInvoiceModel(invoiceRow!), clientName, lineItemsPayload.length),
+      );
       if (input.status === InvoiceStatus.OPEN) {
         nextInvoiceNumber = incrementInvoiceNumber(nextInvoiceNumber);
       } else {
@@ -398,19 +405,25 @@ export class InvoicesRepository {
       this.getClientNamesById(updated.clientId),
       this.getLineItemCountsByInvoiceId(id),
     ]);
-    return toInvoiceVM(
+    const invoiceVm = toInvoiceVM(
       toInvoiceModel(updated),
       clientsById.get(updated.clientId) ?? 'Unknown client',
       countsByInvoiceId.get(id) ?? 0,
     );
+    this.activityLogWriter.logInvoiceStatusChanged({
+      invoice: invoiceVm,
+      fromStatus: currentStatus as InvoiceStatus,
+      toStatus: input.status,
+    });
+    return invoiceVm;
   }
 
   async deleteInvoice(id: number): Promise<boolean> {
     const { data: existing, error: existingError } = await this.supabase
       .from('invoices')
-      .select('id, status')
+      .select('id, status, invoice_number, client_id')
       .eq('id', id)
-      .maybeSingle<{ id: number; status: string }>();
+      .maybeSingle<{ id: number; status: string; invoice_number: string; client_id: number }>();
     throwIfError(existingError, 'Failed to load invoice.');
     if (!existing) {
       return false;
@@ -433,8 +446,15 @@ export class InvoicesRepository {
       .eq('locked_by_invoice_id', id);
     throwIfError(unlockError, 'Failed to unlock time entries.');
 
+    const clientNames = await this.getClientNamesById(existing.client_id);
     const { error: deleteError } = await this.supabase.from('invoices').delete().eq('id', id);
     throwIfError(deleteError, 'Failed to delete invoice.');
+    this.activityLogWriter.logInvoiceDeleted({
+      id: existing.id,
+      invoiceNumber: existing.invoice_number,
+      clientName: clientNames.get(existing.client_id) ?? 'Unknown client',
+      clientId: existing.client_id,
+    });
     return true;
   }
 

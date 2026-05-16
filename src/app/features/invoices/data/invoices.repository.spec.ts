@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { SUPABASE_CLIENT } from '../../../core/supabase/supabase.client';
 import { createFakeSupabase, FakeTables } from '../../../../testing/supabase-client.fake';
 import { BillingModel } from '../../projects/models/project.model';
+import { ActivityLogWriter } from '../../activity-logs/data/activity-log.writer';
 import { SettingsRepository } from '../../settings/data/settings.repository';
 import { InvoiceStatus } from '../models/invoice.model';
 import { InvoicesRepository } from './invoices.repository';
@@ -35,11 +36,18 @@ function configure(tables: Partial<FakeTables>) {
     { userId: USER_ID },
   );
   TestBed.resetTestingModule();
+  const activityLogWriter = {
+    logInvoiceCreated: vi.fn(),
+    logInvoiceStatusChanged: vi.fn(),
+    logInvoiceDeleted: vi.fn(),
+  };
+
   TestBed.configureTestingModule({
     providers: [
       InvoicesRepository,
       SettingsRepository,
       { provide: SUPABASE_CLIENT, useValue: fake },
+      { provide: ActivityLogWriter, useValue: activityLogWriter },
     ],
   });
   return TestBed.inject(InvoicesRepository);
@@ -75,6 +83,7 @@ describe('InvoicesRepository', () => {
 
     expect(created).toHaveLength(1);
     expect(created[0].invoiceNumber).toBe('CONCEPT01');
+    expect(TestBed.inject(ActivityLogWriter).logInvoiceCreated).toHaveBeenCalled();
     const settings = await TestBed.inject(SettingsRepository).getSettings();
     expect(settings.nextInvoiceNumber).toBe('INV-20260001');
   });

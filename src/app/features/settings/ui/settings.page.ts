@@ -22,16 +22,7 @@ import {
   selector: 'app-settings-page',
   imports: [ReactiveFormsModule, HlmButtonImports, HlmInputImports, HlmSeparatorImports],
   template: `
-    <section class="mx-auto flex w-full max-w-4xl flex-col gap-6">
-      <header class="space-y-2">
-        <h1 class="text-2xl font-semibold tracking-tight">Settings</h1>
-        <p class="text-sm text-muted-foreground">
-          Configure app-wide defaults used across bookkeeping and invoice flows.
-        </p>
-      </header>
-
-      <div hlmSeparator></div>
-
+    <section class="flex flex-col gap-6">
       <div class="rounded-xl border border-border bg-card p-6 shadow-sm">
         <div class="mb-6 space-y-1">
           <h2 class="text-lg font-semibold">Invoicing</h2>

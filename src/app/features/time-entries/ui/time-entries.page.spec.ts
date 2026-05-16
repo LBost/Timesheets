@@ -5,6 +5,7 @@ import { ClientsStore } from '../../clients/state/clients.store';
 import { OrdersStore } from '../../orders/state/orders.store';
 import { ProjectsStore } from '../../projects/state/projects.store';
 import { SettingsStore } from '../../settings/state/settings.store';
+import { ActivityLogWriter } from '../../activity-logs/data/activity-log.writer';
 import { TimeEntriesStore } from '../state/time-entries.store';
 import { TimeEntriesPage } from './time-entries.page';
 
@@ -60,6 +61,10 @@ describe('TimeEntriesPage', () => {
     show: vi.fn(),
   };
 
+  const activityLogWriter = {
+    logEmailDraftOpened: vi.fn(),
+  };
+
   beforeEach(async () => {
     storeMock.entries.mockReturnValue([]);
     storeMock.entriesByDate.mockReturnValue({});
@@ -104,8 +109,10 @@ describe('TimeEntriesPage', () => {
         { provide: OrdersStore, useValue: ordersStoreMock },
         { provide: SettingsStore, useValue: settingsStoreMock },
         { provide: ToastService, useValue: toastMock },
+        { provide: ActivityLogWriter, useValue: activityLogWriter },
       ],
     }).compileComponents();
+    vi.clearAllMocks();
   });
 
   it('creates the page', () => {
@@ -339,5 +346,40 @@ describe('TimeEntriesPage', () => {
       true,
     );
     expect(page.pendingEmailDraft()).toBeNull();
+  });
+
+  it('logs activity when email draft is launched', () => {
+    const fixture = TestBed.createComponent(TimeEntriesPage);
+    const page = fixture.componentInstance as any;
+
+    page.launchEmailDraft(
+      [
+        {
+          id: 1,
+          clientId: 1,
+          clientName: 'Acme',
+          clientEmail: 'acme@example.com',
+          projectCode: 'PRJ',
+          projectName: 'Project',
+          orderCode: null,
+          orderName: null,
+          date: '2026-05-07',
+          hours: 2,
+          description: '',
+        },
+      ],
+      'Time entries - Test',
+      true,
+    );
+
+    expect(activityLogWriter.logEmailDraftOpened).toHaveBeenCalledWith(
+      expect.objectContaining({
+        clientId: 1,
+        clientName: 'Acme',
+        entryCount: 1,
+        subject: 'Time entries - Test',
+        scope: 'period',
+      }),
+    );
   });
 });

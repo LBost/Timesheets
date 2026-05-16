@@ -9,6 +9,7 @@ import { throwIfError } from '../../../core/supabase/postgrest.util';
 import { normalizeClientAccentHex } from '../../../shared/components/client-accent/client-accent.util';
 import { TimeEntryCreateInput, TimeEntryUpdateInput } from '../models/time-entry.model';
 import { TimeEntryVM } from '../models/time-entry.vm';
+import { ActivityLogWriter } from '../../activity-logs/data/activity-log.writer';
 import {
   TimeEntryRow,
   fromTimeEntryRow,
@@ -49,6 +50,7 @@ type OrderLookupRow = {
 @Injectable({ providedIn: 'root' })
 export class TimeEntriesRepository {
   private readonly supabase: SupabaseClient = inject(SUPABASE_CLIENT);
+  private readonly activityLogWriter = inject(ActivityLogWriter);
 
   async listEntriesForMonth(year: number, month: number): Promise<TimeEntryVM[]> {
     const start = isoDate(new Date(year, month, 1));
@@ -127,7 +129,9 @@ export class TimeEntriesRepository {
       .single<TimeEntryRow>();
     throwIfError(error, 'Failed to create time entry.');
 
-    return this.hydrateSingle(row!);
+    const created = await this.hydrateSingle(row!);
+    this.activityLogWriter.logTimeEntryCreated(created);
+    return created;
   }
 
   async updateEntry(id: number, input: TimeEntryUpdateInput): Promise<TimeEntryVM | null> {
@@ -179,7 +183,9 @@ export class TimeEntriesRepository {
       return null;
     }
 
-    return this.hydrateSingle(row);
+    const updated = await this.hydrateSingle(row);
+    this.activityLogWriter.logTimeEntryUpdated(updated);
+    return updated;
   }
 
   async deleteEntry(id: number): Promise<boolean> {
@@ -196,8 +202,21 @@ export class TimeEntriesRepository {
       throw new Error('This time entry is locked by an open invoice and cannot be deleted.');
     }
 
+    const existing = await this.getEntryById(id);
+    if (!existing) {
+      return false;
+    }
+
     const { error } = await this.supabase.from('time_entries').delete().eq('id', id);
     throwIfError(error, 'Failed to delete time entry.');
+    this.activityLogWriter.logTimeEntryDeleted({
+      id: existing.id,
+      clientName: existing.clientName,
+      projectCode: existing.projectCode,
+      date: existing.date,
+      clientId: existing.clientId,
+      projectId: existing.projectId,
+    });
     return true;
   }
 

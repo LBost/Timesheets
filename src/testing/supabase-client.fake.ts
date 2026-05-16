@@ -32,6 +32,7 @@ interface QueryState {
   payload: Row | Row[] | null;
   upsertConflict: string | null;
   finalize: 'single' | 'maybeSingle' | null;
+  limitCount: number | null;
 }
 
 interface QueryResult<T = unknown> {
@@ -67,6 +68,10 @@ class FakeQuery<T = unknown> implements PromiseLike<QueryResult<T>> {
     return this.addFilter((row) => (row[column] as never) >= (value as never));
   }
 
+  lte(column: string, value: unknown): FakeQuery<T> {
+    return this.addFilter((row) => (row[column] as never) <= (value as never));
+  }
+
   lt(column: string, value: unknown): FakeQuery<T> {
     return this.addFilter((row) => (row[column] as never) < (value as never));
   }
@@ -76,6 +81,19 @@ class FakeQuery<T = unknown> implements PromiseLike<QueryResult<T>> {
       return this.addFilter((row) => row[column] !== null && row[column] !== undefined);
     }
     return this;
+  }
+
+  like(column: string, pattern: string): FakeQuery<T> {
+    const prefix = pattern.endsWith('%') ? pattern.slice(0, -1) : pattern;
+    return this.addFilter((row) => String(row[column] ?? '').startsWith(prefix));
+  }
+
+  or(filter: string): FakeQuery<T> {
+    return this.addFilter(parseOrFilter(filter));
+  }
+
+  limit(count: number): FakeQuery<T> {
+    return new FakeQuery<T>(this.client, { ...this.state, limitCount: count });
   }
 
   order(column: string, options?: { ascending?: boolean }): FakeQuery<T> {
@@ -122,6 +140,66 @@ class FakeQuery<T = unknown> implements PromiseLike<QueryResult<T>> {
       filters: [...this.state.filters, predicate],
     });
   }
+}
+
+function parseOrFilter(filter: string): (row: Row) => boolean {
+  const parts = splitTopLevelOrParts(filter);
+  const predicates = parts.map(parseOrPart);
+  return (row) => predicates.some((predicate) => predicate(row));
+}
+
+function splitTopLevelOrParts(filter: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let current = '';
+  for (const char of filter) {
+    if (char === '(') depth += 1;
+    if (char === ')') depth -= 1;
+    if (char === ',' && depth === 0) {
+      parts.push(current);
+      current = '';
+      continue;
+    }
+    current += char;
+  }
+  if (current.length > 0) {
+    parts.push(current);
+  }
+  return parts;
+}
+
+function parseOrPart(part: string): (row: Row) => boolean {
+  const trimmed = part.trim();
+  if (trimmed.startsWith('and(') && trimmed.endsWith(')')) {
+    const inner = trimmed.slice(4, -1);
+    const conditions = splitTopLevelOrParts(inner).map(parseSimpleCondition);
+    return (row) => conditions.every((condition) => condition(row));
+  }
+  return parseSimpleCondition(trimmed);
+}
+
+function parseSimpleCondition(part: string): (row: Row) => boolean {
+  const likeMatch = part.match(/^([^.]+)\.like\.(.+)$/);
+  if (likeMatch) {
+    const [, column, pattern] = likeMatch;
+    const prefix = pattern.endsWith('%') ? pattern.slice(0, -1) : pattern;
+    return (row) => String(row[column] ?? '').startsWith(prefix);
+  }
+
+  const eqMatch = part.match(/^([^.]+)\.eq\.(.+)$/);
+  if (eqMatch) {
+    const [, column, value] = eqMatch;
+    const parsed = Number.isNaN(Number(value)) ? value : Number(value);
+    return (row) => row[column] === parsed;
+  }
+
+  const ltMatch = part.match(/^([^.]+)\.lt\.(.+)$/);
+  if (ltMatch) {
+    const [, column, value] = ltMatch;
+    return (row) => (row[column] as never) < (value as never);
+  }
+
+  return () => true;
 }
 
 function parseSelectColumns(columns: string): SelectAlias[] {
@@ -172,6 +250,7 @@ export class FakeSupabaseClient {
       payload: null,
       upsertConflict: null,
       finalize: null,
+      limitCount: null,
     };
     return {
       select: (columns?: string, options?: QueryState['selectOptions']) =>
@@ -231,6 +310,8 @@ export class FakeSupabaseClient {
       case 'select': {
         const filtered = rows.filter(matches);
         const sorted = sortRows(filtered, state.ordering);
+        const limited =
+          state.limitCount === null ? sorted : sorted.slice(0, state.limitCount);
         const count =
           state.selectOptions?.count === 'exact' ||
           state.selectOptions?.count === 'planned' ||
@@ -239,7 +320,7 @@ export class FakeSupabaseClient {
             : undefined;
         const data = state.selectOptions?.head
           ? null
-          : sorted.map((row) => applyAliases(row, state.selectAliases));
+          : limited.map((row) => applyAliases(row, state.selectAliases));
         return finalizeResult<T>(state, data, null, count);
       }
 

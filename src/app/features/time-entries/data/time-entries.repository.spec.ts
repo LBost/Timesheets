@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 
 import { SUPABASE_CLIENT } from '../../../core/supabase/supabase.client';
 import { createFakeSupabase, FakeTables } from '../../../../testing/supabase-client.fake';
+import { ActivityLogWriter } from '../../activity-logs/data/activity-log.writer';
 import { TimeEntriesRepository } from './time-entries.repository';
 
 const USER_ID = '00000000-0000-0000-0000-000000000001';
@@ -39,6 +40,11 @@ function seed(overrides: Partial<FakeTables> = {}): FakeTables {
 
 describe('TimeEntriesRepository', () => {
   let repository: TimeEntriesRepository;
+  const activityLogWriter = {
+    logTimeEntryCreated: vi.fn(),
+    logTimeEntryUpdated: vi.fn(),
+    logTimeEntryDeleted: vi.fn(),
+  };
 
   function configure(tables: FakeTables): void {
     const fake = createFakeSupabase(tables, { userId: USER_ID });
@@ -47,9 +53,11 @@ describe('TimeEntriesRepository', () => {
       providers: [
         TimeEntriesRepository,
         { provide: SUPABASE_CLIENT, useValue: fake },
+        { provide: ActivityLogWriter, useValue: activityLogWriter },
       ],
     });
     repository = TestBed.inject(TimeEntriesRepository);
+    vi.clearAllMocks();
   }
 
   it('creates and lists entries in month', async () => {
@@ -71,6 +79,7 @@ describe('TimeEntriesRepository', () => {
     expect(entries[0].clientAccentColor).toBeNull();
     expect(entries[0].orderCode).toBe('ORD-1');
     expect(entries[0].orderName).toBe('Implementation');
+    expect(activityLogWriter.logTimeEntryCreated).toHaveBeenCalledOnce();
   });
 
   it('hydrates client accent color on entries', async () => {

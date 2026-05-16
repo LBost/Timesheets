@@ -52,7 +52,24 @@ export const routes: Routes = [
       {
         path: 'settings',
         loadComponent: () =>
-          import('./features/settings/ui/settings.page').then((module) => module.SettingsPage),
+          import('./features/settings/ui/settings-shell.page').then(
+            (module) => module.SettingsShellPage,
+          ),
+        children: [
+          { path: '', redirectTo: 'general', pathMatch: 'full' },
+          {
+            path: 'general',
+            loadComponent: () =>
+              import('./features/settings/ui/settings.page').then((module) => module.SettingsPage),
+          },
+          {
+            path: 'logs',
+            loadComponent: () =>
+              import('./features/activity-logs/ui/activity-logs.page').then(
+                (module) => module.ActivityLogsPage,
+              ),
+          },
+        ],
       },
     ]
   }

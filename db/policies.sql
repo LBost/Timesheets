@@ -1,11 +1,16 @@
+-- ===========================================================================
+-- HOW TO USE IN SUPABASE SQL EDITOR
+-- - Full file: safe to re-run anytime (refreshes all FKs + RLS).
+-- - Routine release: run ONLY the section marked for your change.
+-- ===========================================================================
 -- Supabase row-level security and auth.users foreign keys.
 -- Apply after running the Drizzle migration in db/migrations/.
 -- Safe to re-run: every statement is idempotent.
 
--- ---------------------------------------------------------------------------
--- Foreign keys to auth.users(id) (kept out of the Drizzle schema because
--- auth is a Supabase-managed schema we don't model in TS).
--- ---------------------------------------------------------------------------
+-- ===========================================================================
+-- SECTION: auth_user_foreign_keys
+-- SUPABASE SQL EDITOR: Run this section when refreshing auth FKs for all tables.
+-- ===========================================================================
 
 alter table public.clients
   drop constraint if exists clients_user_id_fkey,
@@ -52,9 +57,12 @@ alter table public.time_entries
   add constraint time_entries_locked_by_invoice_id_fkey
     foreign key (locked_by_invoice_id) references public.invoices(id) on delete set null;
 
--- ---------------------------------------------------------------------------
--- Enable RLS and owner-only policies (user_id = auth.uid()) for every table.
--- ---------------------------------------------------------------------------
+-- END SECTION: auth_user_foreign_keys
+
+-- ===========================================================================
+-- SECTION: row_level_security
+-- SUPABASE SQL EDITOR: Run this section when refreshing RLS for existing tables.
+-- ===========================================================================
 
 alter table public.clients enable row level security;
 drop policy if exists "clients owner read"   on public.clients;
@@ -135,3 +143,25 @@ create policy "invoice_line_items owner read"   on public.invoice_line_items for
 create policy "invoice_line_items owner insert" on public.invoice_line_items for insert with check (user_id = auth.uid());
 create policy "invoice_line_items owner update" on public.invoice_line_items for update using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "invoice_line_items owner delete" on public.invoice_line_items for delete using (user_id = auth.uid());
+
+-- END SECTION: row_level_security
+
+-- ===========================================================================
+-- SECTION: activity_logs
+-- SUPABASE SQL EDITOR: Run ONLY this section after applying the activity_logs
+-- Drizzle migration (db/migrations/000N_*.sql). Safe to re-run.
+-- Do NOT run the sections above unless you are intentionally refreshing all FKs/RLS.
+-- ===========================================================================
+
+alter table public.activity_logs
+  drop constraint if exists activity_logs_user_id_fkey,
+  add constraint activity_logs_user_id_fkey
+    foreign key (user_id) references auth.users(id) on delete cascade;
+
+alter table public.activity_logs enable row level security;
+drop policy if exists "activity_logs owner read"   on public.activity_logs;
+drop policy if exists "activity_logs owner insert" on public.activity_logs;
+create policy "activity_logs owner read"   on public.activity_logs for select using (user_id = auth.uid());
+create policy "activity_logs owner insert" on public.activity_logs for insert with check (user_id = auth.uid());
+
+-- END SECTION: activity_logs

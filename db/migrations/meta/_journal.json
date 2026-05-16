@@ -15,6 +15,13 @@
       "when": 1778144824151,
       "tag": "0001_steady_preak",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1778925270940,
+      "tag": "0002_fearless_vampiro",
+      "breakpoints": true
     }
   ]
 }

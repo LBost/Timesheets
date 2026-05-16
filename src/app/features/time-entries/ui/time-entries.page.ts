@@ -22,6 +22,7 @@ import { OrdersStore } from '../../orders/state/orders.store';
 import { ProjectsStore } from '../../projects/state/projects.store';
 import { SettingsStore } from '../../settings/state/settings.store';
 import { TimeEntryCreateInput, TimeEntryUpdateInput } from '../models/time-entry.model';
+import { ActivityLogWriter } from '../../activity-logs/data/activity-log.writer';
 import { TimeEntriesStore } from '../state/time-entries.store';
 import { provideIcons } from '@ng-icons/core';
 import {
@@ -268,6 +269,7 @@ export class TimeEntriesPage implements OnInit {
   private readonly ordersStore = inject(OrdersStore);
   private readonly settingsStore = inject(SettingsStore);
   private readonly toast = inject(ToastService);
+  private readonly activityLogWriter = inject(ActivityLogWriter);
 
   @ViewChild('sheetOpenButton', { read: ElementRef })
   private readonly sheetOpenButton?: ElementRef<HTMLButtonElement>;
@@ -816,6 +818,16 @@ export class TimeEntriesPage implements OnInit {
     const toPart = to ? encodeURIComponent(to) : '';
     const url = `mailto:${toPart}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     window.location.href = url;
+    const first = entries[0];
+    if (first) {
+      this.activityLogWriter.logEmailDraftOpened({
+        clientId: first.clientId,
+        clientName: first.clientName,
+        entryCount: entries.length,
+        subject,
+        scope: includeDate ? 'period' : 'day',
+      });
+    }
   }
 
   private computeEmailClientChoices(
