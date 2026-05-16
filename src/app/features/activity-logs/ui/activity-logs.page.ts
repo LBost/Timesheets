@@ -93,22 +93,24 @@ const CATEGORY_OPTIONS: CategoryOption[] = [
       @if (store.logs().length > 0) {
         <div class="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
           <div hlmTableContainer>
-            <table hlmTable class="w-full">
+            <table hlmTable class="w-full table-fixed">
               <thead hlmTHead>
                 <tr hlmTr>
                   <th hlmTh class="w-44">When</th>
-                  <th hlmTh>Summary</th>
+                  <th hlmTh class="w-auto">Summary</th>
                   <th hlmTh class="w-48">Action</th>
                 </tr>
               </thead>
               <tbody hlmTBody>
                 @for (log of store.logs(); track log.id) {
                   <tr hlmTr>
-                    <td hlmTd class="text-sm text-muted-foreground">
+                    <td hlmTd class="text-sm text-muted-foreground whitespace-nowrap">
                       {{ formatTimestamp(log.createdAt) }}
                     </td>
-                    <td hlmTd class="text-sm">{{ log.summary }}</td>
-                    <td hlmTd>
+                    <td hlmTd class="max-w-0 text-sm">
+                      <span class="block truncate" [title]="log.summary">{{ log.summary }}</span>
+                    </td>
+                    <td hlmTd class="whitespace-nowrap">
                       <span
                         class="inline-flex rounded-md border border-border/50 bg-muted/50 px-2 py-0.5 text-xs font-medium"
                       >
