@@ -19,10 +19,54 @@ import { HlmSidebarTrigger } from '@spartan-ng/helm/sidebar';
         >
           <span class="sr-only">Toggle navigation sidebar</span>
         </button>
-        <div
-          class="grid size-8 place-items-center rounded-lg bg-lime-500 text-sm font-bold text-primary-foreground"
-        >
-          TS
+        <div class="grid size-8 place-items-center">
+          <svg
+            width="32"
+            height="32"
+            viewBox="0 0 32 32"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <defs>
+              <linearGradient id="bg" x1="4" y1="4" x2="28" y2="28" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#4F46E5" />
+                <stop offset="1" stop-color="#06B6D4" />
+              </linearGradient>
+            </defs>
+
+            <!-- Background -->
+            <rect x="2" y="2" width="28" height="28" rx="7" fill="url(#bg)" />
+
+            <!-- Clock Face -->
+            <circle cx="16" cy="16" r="8" fill="white" fill-opacity="0.95" />
+
+            <!-- Clock Hands -->
+            <path
+              d="M16 11V16L19.5 18"
+              stroke="#4F46E5"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+
+            <!-- Checklist Lines -->
+            <rect x="8" y="8" width="3" height="3" rx="1" fill="white" fill-opacity="0.9" />
+            <rect x="8" y="21" width="3" height="3" rx="1" fill="white" fill-opacity="0.9" />
+            <path
+              d="M12.5 9.5H18"
+              stroke="white"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              opacity="0.9"
+            />
+            <path
+              d="M12.5 22.5H18"
+              stroke="white"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              opacity="0.9"
+            />
+          </svg>
         </div>
       </div>
       <div class="flex items-center gap-2">
