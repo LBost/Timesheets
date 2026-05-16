@@ -1,0 +1,16 @@
+---
+description: Use Bun instead of Node.js, npm, pnpm, or yarn.
+globs: "**/*.{ts,tsx,html,css,js,jsx},**/package.json"
+alwaysApply: true
+---
+
+# Bun-first development
+
+Prefer Bun for tooling and runtime where applicable.
+
+- **Package management:** Use `bun install`, `bun add`, and `bun remove`. Commit `bun.lockb` (not `package-lock.json` or `pnpm-lock.yaml`).
+- **Scripts:** Use `bun run <script>` (e.g. `bun run build`, `bun run test`). Do not suggest `npm run`, `pnpm run`, or `yarn`.
+- **HTTP servers:** For new Bun-native services, prefer `Bun.serve()` over Node-only HTTP stacks unless the project already standardizes on something else.
+- **TypeScript:** Rely on Bun’s native TypeScript support when running TS directly with Bun; follow the repo’s existing build pipeline (e.g. Angular CLI) for app bundles.
+
+When suggesting terminal commands or `package.json` edits, default to Bun equivalents.

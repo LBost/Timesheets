@@ -1,0 +1,27 @@
+---
+description: Prefer Spartan UI (brain + helm) over ad hoc HTML for interactive UI; ask the user when no primitive exists.
+globs: "**/*.{ts,html}"
+alwaysApply: true
+---
+
+# Spartan UI first
+
+Use [spartan](https://spartan.ng/) for UI primitives in Angular: **`@spartan-ng/brain/*`** (`Brn*`) for behavior and **`@spartan-ng/helm/*`** (`Hlm*`) for styled building blocks.
+
+## This repository
+
+Path aliases map many `@spartan-ng/helm/...` entry points to `libs/ui/*`. Import the **`@spartan-ng/helm/...`** paths the project already defines in `tsconfig.json` so shared styling and tokens stay consistent.
+
+## What to prefer
+
+For buttons, inputs, text areas, icons, dialogs, sheets, menus, tooltips, tabs, separators, skeletons, resizable layouts, sidebars, and similar primitives, use the matching Spartan **Helm** components (and **Brain** directives/components where the pattern requires it) instead of raw `<button>`, `<input>`, unstyled popovers, or one-off markup.
+
+Plain semantic elements remain fine for **document structure** (e.g. headings, landmarks, simple layout wrappers) when there is no Spartan replacement.
+
+## When nothing fits
+
+If there is **no** suitable Spartan brain/helm primitive for the interaction or pattern, **do not** invent a large custom HTML/CSS substitute. **Ask the user** how to proceed (e.g. add a new Spartan primitive via CLI, extend `libs/ui`, or accept an exception).
+
+## Docs
+
+Consult [spartan.ng](https://spartan.ng/) (docs, components, blocks) for APIs, composition, and accessibility patterns before implementing new UI.
